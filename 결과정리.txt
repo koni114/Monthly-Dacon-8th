@@ -1,0 +1,8 @@
+## 
+XGBoost AUC :  0.7616895
+CatBoost AUC : 0.7646067
+                     
+## 전처리 X
+XGBoost AUC  : 07624
+CatBoost AUC : 0.7655
+assemble final : 0.7675025
