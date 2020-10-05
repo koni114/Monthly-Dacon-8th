@@ -1,0 +1,142 @@
+###############
+## 컬럼 정보 ##
+###############
+## monthly dacon 8
+## 데이터 셋 간략 정리
+## train Dataset
+## row num : 45532, col num : 78
+## 컬럼 종류
+## 1. index
+## 2. Q_A / Q_E (a~t) : 비식별화를 위해 일부 질문은 Secret 처리
+## 3. Q_E(a~t)        : 질문을 답할 때까지의 시간
+## 4. age_group       : 연령
+## 5. education       : 교육 수준
+##                      (1 = Less than high school, 2=High school, 3=University degree, 4=Graduate degree, 0=무응답)
+## engnat             : 모국어가 영어
+##                      1 = Yes, 2 = No, 0 = 무응답
+## 6. familysize      : 형제자매 수
+## 7. gender          : 성별
+##                      Male, Female
+
+## 8. hand            : 필기하는 손
+##                      1=Right, 2=Left, 3=Both, 0=무응답
+## 9. married         : 혼인 상태
+##                      1=Never married, 2=Currently married, 3=Previously married, 0=Other
+## 10. race           : 인종
+##                      Asian, Arab, Black, Indigenous Australian, Native American, White, Other
+## 11. religion       : 종교
+##                      Agnostic, Atheist, Buddhist, Christian_Catholic, Christian_Mormon, 
+##                      Christian_Protestant, Christian_Other, Hindu, Jewish, Muslim, Sikh, Other
+## tp__(01~10)        : items were rated "I see myself as:" _____ such that
+##                      tp01 : Extraverted, enthusiastic.
+##                      tp02 : Critical, quarrelsome.
+##                      tp03 : Dependable, self-disciplined.
+##                      tp04 : Anxious, easily upset.
+##                      tp05 : Open to new experiences, complex.
+##                      tp06 : Reserved, quiet.
+##                      tp07 : Sympathetic, warm.
+##                      tp08 : Disorganized, careless.
+##                      tp09 : Calm, emotionally stable.
+##                      tp10 : Conventional, uncreative.
+## urban               : 유년기의 거주 구역
+##                       1=Rural (country side), 2=Suburban, 3=Urban (town, city), 0=무응답
+## wr_(01~13)          : 실존하는 해당 단어의 정의을 앎
+##                       1=Yes, 0=No
+## wf_(01~03)          : 허구인 단어의 정의를 앎
+##                       1=Yes, 0=No
+
+
+1  18.38771349  education
+2  11.30780350  age_group
+3   5.17095374       race
+4   2.54735745        QqE
+5   2.54506176   religion
+6   2.28499038        QiE
+7   2.26970194        QhE
+8   2.09000547    married
+9   1.95227999        QpE
+10  1.93783362        QsE
+11  1.88823869        QaE
+12  1.84372583        QlE
+13  1.82141481        QbE
+14  1.73979757        QrE
+15  1.73805780        QdE
+16  1.72007272        QeE
+17  1.68968392        QmE
+18  1.53121655        QfE
+19  1.52255560        QcE
+20  1.51388087     engnat
+21  1.47773257        QkE
+22  1.47376654        QgE
+23  1.42834282        QnE
+24  1.41169188        QtE
+25  1.15873136       tp03
+26  1.15616899        QjE
+27  1.12364622        QoE
+28  1.02132597 familysize
+29  1.01764805        QqA
+30  0.96359539       tp09
+31  0.88960026       tp02
+32  0.87273394        QgA
+33  0.85368953       tp06
+34  0.79297362       tp04
+35  0.79113398        QbA
+36  0.76541820       tp01
+37  0.76234938        QpA
+38  0.73099911       tp07
+39  0.68754033        QiA
+40  0.68568506        QsA
+41  0.67867179        QmA
+42  0.67482181     gender
+43  0.66178390        QcA
+44  0.63989105      urban
+45  0.59897574      wr_06
+46  0.55636145        QdA
+47  0.54625452       tp08
+48  0.52627645        QtA
+49  0.50636321        QfA
+50  0.48294058        QeA
+51  0.48287957       tp10
+52  0.47027307      wr_11
+53  0.43590938        QaA
+54  0.42199320      wf_01
+55  0.40321286      wr_02
+56  0.40302732        QhA
+57  0.40151974      wf_02
+58  0.39864341        QoA
+59  0.38438175        QlA
+60  0.34061520        QnA
+61  0.32277486       tp05
+62  0.29437978      wr_09
+63  0.24196790      wf_03
+64  0.23343727        QjA
+65  0.21072193       hand
+66  0.20934702      wr_01
+67  0.20810208        QrA
+68  0.19573938      wr_13
+69  0.12760127      wr_10
+70  0.09621056        QkA
+71  0.09392996      wr_07
+72  0.08910992      wr_05
+73  0.06464705      wr_08
+74  0.03011613      wr_03
+75  0.00000000      wr_04
+76  0.00000000      wr_12
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+CatBoost
+원래 투표를 하지 않았는데, 투표를 했다고 예측하는 값이 많음.

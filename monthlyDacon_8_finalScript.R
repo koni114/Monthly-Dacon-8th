@@ -70,7 +70,6 @@ factor_var <- c("engnat",
                 "urban",
                 "voted")
 
-
 train[factor_var] <- train %>% select(all_of(factor_var))        %>% mutate_all(as.factor)
 test[factor_var]  <-  test %>% select(all_of(factor_var[c(-9)])) %>% mutate_all(as.factor)
 
@@ -82,8 +81,8 @@ test[c(ordered_var1, ordered_var2) ]   <- test %>% select(all_of(ordered_var1), 
 
 #-  변수 제거
 remv_var <- c("index")
-train <- train %>%  select(-remv_var)
-test  <- test %>%  select(-remv_var)
+train    <- train %>%  select(-remv_var)
+test     <- test  %>%  select(-remv_var)
 
 #- one-hot encoding (필요시)
 oneHotVar       <- c(factor_var)
@@ -110,17 +109,20 @@ trainIdx <- createDataPartition(train[,"voted"], p = 0.7, list = F)
 trainData <- train[ trainIdx, ]
 testData  <- train[-trainIdx, ]
 
+## final 제출시, 적용
+trainData <- train
+testData  <- test
+
 ################
 ## 1. xgboost ##
 ################
 # xgboost : nrounds = 734, max_depth = 6, eta = 0.0758, gamma = 4.6, colsample_bytree = 0.537, min_child_weight = 17, subsample = 0.983 
-
 trainData_xgb <- trainData
 testData_xgb  <- testData
 set.seed(1)
 
 trControl <- caret::trainControl(
-  method          = "cv", 
+  method          = "none", 
   number          = 10, 
   verboseIter     = T,
   savePredictions = TRUE, 
@@ -188,19 +190,31 @@ model <- catboost.train(
                 metric_period = 10)            
 )           
 
+# catboost importance 
+catboost_imp           <- data.frame(model$feature_importances)
+catboost_imp$variables <- rownames(model$feature_importances)
+colnames(catboost_imp) <- c("importance", 'variables')
+catboost_imp           <- catboost_imp %>% arrange(-importance)
+View(catboost_imp)
+
 # 3. catboost.predict function
 real_pool  <- catboost.load_pool(testData_cat)
 YHat_cat   <- catboost.predict(
   model, 
   real_pool,
-  prediction_type = c('Probability'))  # Probability, 
+  prediction_type = c('Class'))  # Probability, Class
+
+caret::confusionMatrix(
+  factor(YHat_cat),
+  factor(ifelse(testData$voted == 2, 1, 0))
+)
 
 AUC_catboost <- mkAUCValue(
   YHat = YHat_cat, 
   Y    = ifelse(testData$voted == 2, 1, 0))
 
 
-testData_wrong <- testData[!YHat_cat == ifelse(testData$voted == 2, 1, 0),]
+testData_wrong <- testData[!YHat_cat  == ifelse(testData$voted == 2, 1, 0),]
 
 
 #####################
@@ -257,13 +271,11 @@ AUC_rf <- mkAUCValue(
   Y    = ifelse(testData$voted == 2, 1, 0))
 
 
-#########
-## SOM ##
-#########
-
-library(kohonen)
-trainData.sc <- scale(trainData)
-testData.sc  <- scale(testData,
+############
+## 4. SOM ##
+############
+trainData.sc <- scale(trainData[-c(101)])
+testData.sc  <- scale(testData[-c(101)],
                       center = attr(trainData.sc,"scaled:center"), 
                       scale  = attr(trainData.sc, "scaled:scale"))
 
@@ -277,8 +289,7 @@ SOM_model <- xyf(trainData.sc,
 pos.prediction <- predict(
   SOM_model, 
   newdata = testData.sc,  
-  whatmap = 1,
-  predict = )
+  whatmap = 1)
 
 table(testData$voted, pos.prediction$prediction[[2]])   
 
@@ -296,3 +307,7 @@ AUC_SOM <- mkAUCValue(
 AUC_final <- mkAUCValue(
   YHat = (YHat_xgb[,2] + YHat_cat) / 2, 
   Y    = ifelse(testData$voted == 2, 1, 0))
+
+
+sample_submission$voted <- (YHat_xgb[,2] + YHat_cat) / 2
+write.csv(sample_submission, "submission_data.csv", row.names = F)
