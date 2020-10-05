@@ -1,5 +1,5 @@
 library(DMwR);library(dplyr);library(data.table);library(caret);library(catboost);library(Matrix);library(ROCR)
-setwd("C:/r/monthlyDacon_8/")
+setwd("C:/r/monthlyDacon_8")
 source('C:/r/monthlyDacon_8/monthlyDacon_8_common.R')
 
 ##################
@@ -23,22 +23,6 @@ test  <- data.table::fread(
   data.table = F,
   na.strings = c("NA", "NaN", "NULL", "\\N"))
 
-##################
-## 변수타입설정 ##
-##################
-#- 범주형 변환
-factor_var <- c("engnat",
-                "age_group",
-                "gender",
-                "hand",
-                "married",
-                "race",
-                "religion",
-                "urban",
-                "voted")
-
-train[factor_var] <- train %>% select(factor_var) %>% mutate_all(as.factor)
-test[factor_var]  <-  test %>% select(factor_var[c(-9)]) %>% mutate_all(as.factor)
 
 #################
 ## 이상치 처리 ##
@@ -58,7 +42,6 @@ test      <- test %>% mutate(familysize = ifelse(familysize >= 18, NA, familysiz
 #################
 ## 결측치 처리 ##
 #################
-
 train <- DMwR::centralImputation(
   data = train  # 데이터 프레임
 )
@@ -69,6 +52,54 @@ test  <- DMwR::centralImputation(
 
 colSums(is.na(train))
 colSums(is.na(test))
+
+##############################
+## 변수타입설정 & 변수 선택 ##
+##############################
+#- 수치형 변수 
+num_var <- train %>%  select_if(is.numeric) %>%  colnames 
+
+#- 범주형(명목형) 변환
+factor_var <- c("engnat",
+                "age_group",
+                "gender",
+                "hand",
+                "married",
+                "race",
+                "religion",
+                "urban",
+                "voted")
+
+
+train[factor_var] <- train %>% select(all_of(factor_var))        %>% mutate_all(as.factor)
+test[factor_var]  <-  test %>% select(all_of(factor_var[c(-9)])) %>% mutate_all(as.factor)
+
+#- 범주형(순서형) 변환
+ordered_var1 <- colnames(train)[grep("Q.A", colnames(train))]
+ordered_var2 <- colnames(train)[grep("tp|wr|wf.", colnames(train))]
+train[c(ordered_var1, ordered_var2)]   <- train %>% select(all_of(ordered_var1), all_of(ordered_var2)) %>% mutate_all(as.ordered)
+test[c(ordered_var1, ordered_var2) ]   <- test %>% select(all_of(ordered_var1), all_of(ordered_var2)) %>% mutate_all(as.ordered)
+
+#-  변수 제거
+remv_var <- c("index")
+train <- train %>%  select(-remv_var)
+test  <- test %>%  select(-remv_var)
+
+#- one-hot encoding (필요시)
+oneHotVar       <- c(factor_var)
+train_fac       <- train %>% select(all_of(oneHotVar))
+dmy_model       <- caret::dummyVars("~ .", data = train_fac)
+train_oneHot    <- data.frame(predict(dmy_model, train_fac))
+
+train  <- train %>% select(-oneHotVar) 
+train  <- dplyr::bind_cols(train, train_oneHot)
+
+test_fac       <- test %>% select(all_of(oneHotVar[c(-9)]))
+dmy_model      <- caret::dummyVars("~ .", data = test_fac)
+test_oneHot    <- data.frame(predict(dmy_model, test_fac))
+
+test  <- test %>% select(-oneHotVar[c(-9)]) 
+test  <- dplyr::bind_cols(test, test_oneHot)
 
 
 ############
@@ -145,6 +176,7 @@ labels     <- ifelse(trainData_cat[,YIdx] == 1, 0, 1)
 train_pool <- catboost.load_pool(data = features, label = labels)
 
 # 2. catboost.train 함수를 이용하여 train
+set.seed(1)
 model <- catboost.train(
   train_pool,                                  #- 학습에 사용하고자 하는 train_pool  
   NULL,                                        #- 
@@ -158,16 +190,16 @@ model <- catboost.train(
 
 # 3. catboost.predict function
 real_pool  <- catboost.load_pool(testData_cat)
-YHat_cat <- catboost.predict(
+YHat_cat   <- catboost.predict(
   model, 
   real_pool,
-  prediction_type = c('Class'))  # Probability, 
+  prediction_type = c('Probability'))  # Probability, 
 
 AUC_catboost <- mkAUCValue(
   YHat = YHat_cat, 
   Y    = ifelse(testData$voted == 2, 1, 0))
 
-nrow(testData)
+
 testData_wrong <- testData[!YHat_cat == ifelse(testData$voted == 2, 1, 0),]
 
 
@@ -224,11 +256,37 @@ AUC_rf <- mkAUCValue(
   YHat = YHat_rf[,2], 
   Y    = ifelse(testData$voted == 2, 1, 0))
 
+
 #########
 ## SOM ##
 #########
 
+library(kohonen)
+trainData.sc <- scale(trainData)
+testData.sc  <- scale(testData,
+                      center = attr(trainData.sc,"scaled:center"), 
+                      scale  = attr(trainData.sc, "scaled:scale"))
 
+set.seed(1)
+SOM_model <- xyf(trainData.sc, 
+                 classvec2classmat(trainData$voted),           #-  classvec2classmat : one-hot encoding 해주는 function
+                 grid       = somgrid(13, 13, "hexagonal"),    #-  grid : 13 x 13, hexagonal
+                 rlen       = 100                              #-  rlen : 100  
+)             
+
+pos.prediction <- predict(
+  SOM_model, 
+  newdata = testData.sc,  
+  whatmap = 1,
+  predict = )
+
+table(testData$voted, pos.prediction$prediction[[2]])   
+
+YHat_SOM <- ifelse(is.na(pos.prediction$prediction[[2]]), 1, pos.prediction$prediction[[2]])
+
+AUC_SOM <- mkAUCValue(
+  YHat = ifelse(YHat_SOM == 2, 1, 0), 
+  Y    = ifelse(testData$voted == 2, 1, 0))
 
 
 ####################
