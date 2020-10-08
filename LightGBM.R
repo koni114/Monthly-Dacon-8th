@@ -1,6 +1,6 @@
-##############
-## LightGBM ##
-##############
+######################
+## LightGBM install ##
+######################
 # R-에서 LightGBM을 설치하는 것은 원래 굉장히 까다로웠었다.
 # 하지만 R-version이 4.0.0 이상인 경우에 CRAN에서 설치하는 것과 
 # 동일하게 편하게 설치할 수 있도록 변경되었다.
@@ -54,8 +54,112 @@ model  <- lgb.cv(
   learning_rate = 1, 
   early_stopping_rounds = 10)
 
+######################
+## LightGBM example ##
+######################
+library(data.table)
+library(Matrix)
+library(dplyr)
+library(MLmetrics)
+library(lightgbm)
+set.seed(257)
 
+train = fread("train.csv") %>% as.data.frame()
+test  = fread("test.csv")  %>% as.data.frame()
 
+# 결측치 --> median 치환 function
+median.impute = function(x){
+  x = as.data.frame(x)
+  for (i in 1:ncol(x)){
+    x[which(x[,i]== -1),i] = NA
+  }
+  
+  x = x %>% mutate_all(~ifelse(is.na(.), median(., na.rm = TRUE), .)) %>% as.data.table()
+  return(x)
+}
 
+#- Pre Processing
+train = median.impute(train)
+test  = median.impute(test)
 
+#- Feature Engineering
+test$target = NA
+data        = rbind(train, test)
 
+data[, fe_amount_NA := rowSums(data == -1, na.rm = T)]
+data[, ps_car_13_ps_reg_03 := ps_car_13*ps_reg_03]
+data[, ps_reg_mult := ps_reg_01*ps_reg_02*ps_reg_03]
+
+#- Create LGB Dataset
+varnames = setdiff(colnames(data), c("id", "target"))
+
+train_sparse = Matrix(as.matrix(data[!is.na(target), varnames, with = F]), sparse=TRUE)
+test_sparse  = Matrix(as.matrix(data[is.na(target),  varnames, with = F]), sparse=TRUE)
+
+y_train  = data[!is.na(target),target]
+test_ids = data[is.na(target) ,id]
+
+lgb.train = lgb.Dataset(
+  data  = train_sparse, 
+  label = y_train)
+
+categoricals.vec = colnames(train)[c(grep("cat",colnames(train)))]
+
+#- Setting up LGBM Parameters
+lgb.grid = list(objective = "binary",
+                metric    = "auc",
+                min_sum_hessian_in_leaf = 1,
+                feature_fraction = 0.7,
+                bagging_fraction = 0.7,
+                bagging_freq = 5,
+                min_data = 100,
+                max_bin = 50,
+                lambda_l1 = 8,
+                lambda_l2 = 1.3,
+                min_data_in_bin=100,
+                min_gain_to_split = 10,
+                min_data_in_leaf = 30,
+                is_unbalance = TRUE)
+
+#- Setting up Gini Eval Function
+lgb.normalizedgini = function(preds, dtrain){
+  actual = getinfo(dtrain, "label")
+  score  = MLmetrics::NormalizedGini(preds,actual)
+  return(list(name = "gini", value = score, higher_better = TRUE))
+}
+
+#- Cross Validation
+lgb.model.cv = lgb.cv(
+  params                = lgb.grid, 
+  data                  = lgb.train, 
+  learning_rate         = 0.02,                    #- *** 훈련량  
+  num_leaves            = 25,
+  num_threads           = 2,                       #- * 병렬처리시 처리할 쓰레드
+  nrounds               = 7000, 
+  early_stopping_rounds = 50,                      #- ** 더이상 발전이 없으면 그만두게 설정할때 이를 몇번동안 발전이 없으면 그만두게 할지 여부
+                                                   #-    validation셋이 없으면 무용지물
+  eval_freq             = 20, 
+  eval                  = lgb.normalizedgini,
+  categorical_feature   = categoricals.vec, 
+  nfold                 = 5, 
+  stratified            = TRUE)
+
+best.iter = lgb.model.cv$best_iter
+
+#- Train Final Model
+lgb.model = lgb.train(
+  params              = lgb.grid, 
+  data                = lgb.train, 
+  learning_rate       = 0.02,                        #- *** 훈련량  
+  num_leaves          = 25,                          #- * 트리가 가질수 있는 최대 잎사귀 수
+  num_threads         = 2 ,                          #- * 병렬처리시 처리할 쓰레드
+  nrounds             = best.iter,                   #- *** 계속 나무를 반복하며 부스팅을 하는데 몇번을 할것인가이다. 1000이상정도는 해주도록 함
+                                                     #-     early_stopping이 있으면 최대한 많이 줘도 (10,000~)별 상관이 없음
+  eval_freq           = 20, 
+  eval                = lgb.normalizedgini,
+  categorical_feature = categoricals.vec)
+
+#- Create and Submit Predictions
+preds = data.table(id=test_ids, target=predict(lgb.model,test_sparse))
+colnames(preds)[1] = "id"
+fwrite(preds, "submission.csv")
