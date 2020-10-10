@@ -62,8 +62,9 @@ library(Matrix)
 library(dplyr)
 library(MLmetrics)
 library(lightgbm)
-set.seed(257)
 
+setwd("C:/r")
+set.seed(257)
 train = fread("train.csv") %>% as.data.frame()
 test  = fread("test.csv")  %>% as.data.frame()
 

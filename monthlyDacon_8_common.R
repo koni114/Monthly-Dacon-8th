@@ -16,3 +16,21 @@ mkAUCValue <- function(YHat, Y){
   auc <- performance(pred, measure = "auc")
   auc@y.values[[1]]
 }
+
+
+getPackages <- function(packs){
+  packages <- unlist(
+    tools::package_dependencies(packs, available.packages(),
+                                which=c("Depends", "Imports"), recursive=TRUE)
+  )
+  packages <- union(packs, packages)
+  return(packages)
+}
+
+lgb.normalizedgini = function(preds, dtrain){
+  actual = getinfo(dtrain, "label")
+  score  = MLmetrics::NormalizedGini(preds,actual)
+  return(list(name = "gini", value = score, higher_better = TRUE))
+}
+
+

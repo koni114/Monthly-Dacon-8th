@@ -47,5 +47,46 @@ prediction <- catboost.predict(
   real_pool,
   prediction_type = c('class'))
 
+#############
+## example ##
+#############
+library(catboost)
 
+#- catboost package 내에 있는 adult_train, adult_test dataset path loading
+library(caret)
+library(titanic)
+library(catboost)
 
+set.seed(12345)
+
+data <- as.data.frame(as.matrix(titanic_train), stringsAsFactors = TRUE)
+
+drop_columns = c("PassengerId", "Survived", "Name", "Ticket", "Cabin")
+x <- data[,!(names(data) %in% drop_columns)]
+y <- data[,c("Survived")]
+
+data <- as.data.frame(as.matrix(iris), stringsAsFactors = TRUE)
+x <- data[,-c(5)]
+y <- data[,c("Species")]
+
+fit_control <- trainControl(method = "cv",
+                            number          = 10, 
+                            verboseIter     = T,
+                            savePredictions = TRUE, 
+                            classProbs      = T)
+
+grid <- expand.grid(depth = c(4, 6, 8),
+                    learning_rate = 0.1,
+                    iterations = 100,
+                    l2_leaf_reg = 1e-3,
+                    rsm = 0.95,
+                    border_count = 64)
+
+report <- train(x, as.factor(make.names(y)),
+                method = catboost.caret,
+                logging_level = 'Verbose', preProc = NULL,
+                tuneGrid = grid, trControl = fit_control)
+
+print(report)
+importance <- varImp(report, scale = FALSE)
+print(importance)
