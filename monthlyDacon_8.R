@@ -15,7 +15,7 @@ library(dplyr);library(data.table);library(ggplot2);library(outliers);library(pl
 ## 5. education       : 교육 수준
 ##                      (1 = Less than high school, 2=High school, 3=University degree, 4=Graduate degree, 0=무응답)
 ## engnat             : 모국어가 영어
-##                      1 = Yes, 2 = No, 0 = 무응답
+##                      (1 = Yes, 2 = No, 0 = 무응답)
 ## 6. familysize      : 형제자매 수
 ## 7. gender          : 성별
 ##                      Male, Female

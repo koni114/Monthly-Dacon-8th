@@ -73,7 +73,29 @@ LightGBM : 0.7682284
 - MachiaScore 파생변수 추가 후,
 LightGBM : 0.7692429
 catboost   : 0.7691375 --> interation 1000으로 증가
+final         : 
+
+** 모델 둘 다 맞추지 못한 데이터를 확인해보자.
+- 투표를 했는데,(Yes, 0), 투표를 하지 않았다고 예측한 경우,(No, 1)
+
+- 투표를 하지 않았는데(No, 1), 투표를 했다고 예측한 경우, (Yes, 0)
+
                 
+변수 중요도를 파악하여, 변수를 빼는 방향도 생각해보자.
+
+
+##############
+## Insight 정리 ##
+##############
+- CatBoost 변수 중요도 확인 결과,
+wf, tp는 크게 영향도가 높지 않고, 대부분 설문지 문항을 고르는데
+걸리는 시간(Q_E),과 대부분의 인적 사항이 영향이 있었음
+상위 10개 변수
+education > age_group > race > religion > QqE > QsE > QdE > married > QhE > QmE.. 
+
+- LightGBM 변수 중요도 확인 결과
+age_group, education, race, married, tp06, tp03, tp04
+ 
 
 
 

@@ -212,6 +212,8 @@ model <- catboost.train(
                 metric_period = 10)            
 )           
 
+save(model, file = "catBoost_model.RData")
+
 # catboost importance 
 catboost_imp           <- data.frame(model$feature_importances)
 catboost_imp$variables <- rownames(model$feature_importances)
@@ -224,7 +226,7 @@ real_pool  <- catboost.load_pool(testData_cat)
 YHat_cat   <- catboost.predict(
   model, 
   real_pool,
-  prediction_type = c('Probability'))  # Probability, Class
+  prediction_type = c('Class'))  # Probability, Class
 
 caret::confusionMatrix(
   factor(YHat_cat),
@@ -235,18 +237,21 @@ AUC_catboost <- mkAUCValue(
   YHat = YHat_cat, 
   Y    = ifelse(testData$voted == 2, 1, 0))
 
+#- 투표를 했는데,(Yes, 0), 투표를 하지 않았다고 예측한 경우,(No, 1)
+testData_wrongNo  <- testData[!YHat_cat  == ifelse(testData$voted == 2, 1, 0),] %>% filter(voted == 1)  
+save(testData_wrongNo, file = "testData_wrongNo_CatBoost.RData")
 
-testData_wrong <- testData[!YHat_cat  == ifelse(testData$voted == 2, 1, 0),]
-
+#- 투표를 하지 않았는데(No, 1), 투표를 했다고 예측한 경우, (Yes, 0)
+testData_wrongYes <- testData[!YHat_cat  == ifelse(testData$voted == 2, 1, 0),] %>% filter(voted == 2)
+save(testData_wrongYes, file = "testData_wrongYes_CatBoost.RData")
 
 #####################
 ## 3. randomForest ##
 #####################
-
 trainData_rf <- trainData
 testData_rf  <- testData
-set.seed(1)
 
+set.seed(1)
 trControl <- caret::trainControl(
   method          = "none", 
   number          = 10, 
@@ -258,7 +263,7 @@ levels(trainData_rf$voted) <- c("Yes", "No")
 levels(testData_rf$voted)  <- c("Yes", "No")
 
 tnGrid <- expand.grid(
-  mtry = c(5)
+  mtry = c(9)
 )
 
 
@@ -376,7 +381,6 @@ lgb.model.cv = lgb.cv(
   nfold                 = 10,
   stratified            = TRUE)
 
-
 best.iter = lgb.model.cv$best_iter
 # best.iter = 295
 
@@ -394,21 +398,34 @@ lgb_model = lgb.train(
 
 save(lgb_model, file = "lgb_model.RData")
 
+#- importance check in R
+tree_imp1  <- lgb.importance(lgb_model, percentage = TRUE)
+tree_imp1
+View(tree_imp1)
+
 #- Create and Submit Predictions
-YHat_lgbm <- predict(lgb_model, test_sparse)
+YHat_lgbm       <- predict(lgb_model, test_sparse)
+YHat_lgbm_Class <- ifelse(YHat_lgbm > 0.5, 1, 0)
 
 AUC_lgbm <- mkAUCValue(
   YHat = YHat_lgbm, 
   Y    = ifelse(testData$voted == 2, 1, 0))
 
+#- 투표를 했는데,(Yes, 0), 투표를 하지 않았다고 예측한 경우,(No, 1)
+testData_wrongNo_gbm  <- testData[!YHat_lgbm_Class  == ifelse(testData$voted == 2, 1, 0),] %>% filter(voted == 1)  
+save(testData_wrongNo_gbm, file = "testData_wrongNo_LightGBM.RData")
+
+#- 투표를 하지 않았는데(No, 1), 투표를 했다고 예측한 경우, (Yes, 0)
+testData_wrongYes_gbm <- testData[!YHat_lgbm  == ifelse(testData$voted == 2, 1, 0),] %>% filter(voted == 2)
+save(testData_wrongYes_gbm, file = "testData_wrongYes_LightGBM.RData")
+
+
 ####################
 ## final assemble ##
 ####################
-
 AUC_final <- mkAUCValue(
   YHat = (YHat_cat + YHat_lgbm) / 2, 
   Y    = ifelse(testData$voted == 2, 1, 0))
-
 
 sample_submission$voted <- (YHat_cat + YHat_lgbm) / 2
 write.csv(sample_submission, "submission_data.csv", row.names = F)
