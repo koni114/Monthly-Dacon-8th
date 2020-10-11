@@ -53,6 +53,20 @@ test  <- DMwR::centralImputation(
 colSums(is.na(train))
 colSums(is.na(test))
 
+###########################
+## 파생변수 생성 및 변경 ##
+###########################
+#- 1. reverse 
+#- QaA, QdA, QeA, QfA, QgA, QiA, QkA, QnA, QqA, QrA --> reverse 
+revVar  <- c("QaA", "QdA", "QeA", "QfA", "QgA", "QiA", "QkA", "QnA", "QqA", "QrA")
+train[revVar] <- train %>% select(revVar) %>% mutate_all(list(~6 - .))
+test[revVar]  <- test %>% select(revVar) %>% mutate_all(list(~6 - .))
+
+#- 2. machia score = 전체 점수의 평균 값 계산
+machiaVar             <- train %>% select(matches("Q.A")) %>%  colnames
+train$machiaScore     <- train %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
+test$machiaScore      <- test  %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
+
 ##############################
 ## 변수타입설정 & 변수 선택 ##
 ##############################
@@ -85,7 +99,7 @@ remv_var <- c("index")
 train    <- train %>%  select(-remv_var)
 test     <- test  %>%  select(-remv_var)
 
-#- one-hot encoding (필요시)
+#- one-hot encoding (필요시) -- LightGBM
 oneHotVar       <- c(factor_var[-9])
 train_fac       <- train %>% select(all_of(oneHotVar))
 dmy_model       <- caret::dummyVars("~ .", data = train_fac)
@@ -194,7 +208,7 @@ model <- catboost.train(
                 random_seed   = 123,           #- seed number
                 custom_loss   = "AUC",         #- 모델링 할 때 추가로 추출할 값들 (train_dir로 지정한 곳으로 해당 결과를 파일로 내보내준다)
                 train_dir     = "./model/CatBoost_R_output", # 모델링 한 결과를 저장할 directory
-                iterations    = 300,                         #- 학습 iteration 수
+                iterations    = 1000,                         #- 학습 iteration 수
                 metric_period = 10)            
 )           
 
@@ -322,7 +336,6 @@ train.lgb <- lgb.Dataset(data  = train_sparse, label = ifelse(y_train == 2, 1, 0
 test.lgb  <- lgb.Dataset(data  = test_sparse)
 
 categoricals.vec <- c(ordered_var1, ordered_var2)
-# categoricals.vec <- c(categoricals.vec, colnames(trainData)[grep(paste(oneHotVar, collapse = "|"), colnames(trainData))])
 
 lgb.grid = list(objective = "binary",
                 metric    = "auc",
@@ -365,6 +378,7 @@ lgb.model.cv = lgb.cv(
 
 
 best.iter = lgb.model.cv$best_iter
+# best.iter = 295
 
 lgb_model = lgb.train(
   params              = lgb.grid, 
@@ -378,7 +392,7 @@ lgb_model = lgb.train(
   eval                = lgb.normalizedgini)
   #categorical_feature = categoricals.vec)
 
-save(lgb.model, file = "lgb_model")
+save(lgb_model, file = "lgb_model.RData")
 
 #- Create and Submit Predictions
 YHat_lgbm <- predict(lgb_model, test_sparse)
@@ -387,15 +401,14 @@ AUC_lgbm <- mkAUCValue(
   YHat = YHat_lgbm, 
   Y    = ifelse(testData$voted == 2, 1, 0))
 
-
 ####################
 ## final assemble ##
 ####################
 
 AUC_final <- mkAUCValue(
-  YHat = (YHat_cat[,2] + YHat_lgbm) / 2, 
+  YHat = (YHat_cat + YHat_lgbm) / 2, 
   Y    = ifelse(testData$voted == 2, 1, 0))
 
 
-sample_submission$voted <- (YHat_cat[,2] + YHat_lgbm) / 2
+sample_submission$voted <- (YHat_cat + YHat_lgbm) / 2
 write.csv(sample_submission, "submission_data.csv", row.names = F)

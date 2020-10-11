@@ -50,8 +50,6 @@ prediction <- catboost.predict(
 #############
 ## example ##
 #############
-library(catboost)
-
 #- catboost package 내에 있는 adult_train, adult_test dataset path loading
 library(caret)
 library(titanic)

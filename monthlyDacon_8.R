@@ -21,7 +21,7 @@ library(dplyr);library(data.table);library(ggplot2);library(outliers);library(pl
 ##                      Male, Female
 
 ## 8. hand            : 필기하는 손
-##                      1=Right, 2=Left, 3=Both, 0=무응답
+##                      1=Right, 2=Left, 3=Both, 0 = 무응답
 ## 9. married         : 혼인 상태
 ##                      1=Never married, 2=Currently married, 3=Previously married, 0=Other
 ## 10. race           : 인종
@@ -50,13 +50,15 @@ library(dplyr);library(data.table);library(ggplot2);library(outliers);library(pl
 ##################
 ## Data Loading ##
 ##################
-setwd("./monthlyDacon_8/")
+setwd("C:/r/Monthly-Dacon-8th/")
 
 train <- data.table::fread(
   "train.csv",
   stringsAsFactors = F,
   data.table = F,
   na.strings = c("NA", "NaN", "NULL", "\\N"))
+
+# train <- testData_wrong
 
 test <- data.table::fread(
   "test_x.csv",
@@ -77,7 +79,8 @@ factor_var <- c("engnat",
                 "religion",
                 "urban",
                 "voted")
-train[factor_var] <- train %>% select(factor_var) %>% mutate_all(as.factor)
+
+train[factor_var] <- train %>% select(all_of(factor_var)) %>% mutate_all(as.factor)
 
 #########
 ## EDA ##
@@ -94,6 +97,7 @@ test  <- test  %>% mutate(index = as.character(index))
 #- 5점척도 데이터. 1
 train %>% select(QaA) %>%  distinct()
 train %>% group_by(QaA) %>%  tally()
+
 
 # 1.3 QaE
 # a 질문을 답할때 까지의 시간
@@ -226,6 +230,7 @@ ggplot(data = train_familysize, aes(x = as.factor(familysize), y = value)) + geo
 train_fs15 <- train %>% filter(familysize >= 15)
 View(train_fs15)
 summary(train_fs15)
+
 # 1.56 gender ----
 # 성별
 #- 성별에 따른 투표율은 크게 변화 없음
@@ -296,7 +301,6 @@ ggplot(data = train_religion, aes(x = reorder(religion, -value), y = value)) + g
 #- 사람 수 : Suburban > Urban > country side > no anwser
 #- 투표 율 : country side > Suburban > Urban
 train_urban <- train %>% group_by(urban) %>% tally()
-
 train_urban <- train %>% group_by(urban, voted) %>% tally()
 train_urban <- reshape2::dcast(data         = train_urban, 
                                   formula   =  urban ~ voted,

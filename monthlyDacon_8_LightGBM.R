@@ -23,6 +23,20 @@ test  <- data.table::fread(
   data.table = F,
   na.strings = c("NA", "NaN", "NULL", "\\N"))
 
+###########################
+## 파생변수 생성 및 변경 ##
+###########################
+#- 1. reverse 
+#- QaA, QdA, QeA, QfA, QgA, QiA, QkA, QnA, QqA, QrA --> reverse 
+revVar  <- c("QaA", "QdA", "QeA", "QfA", "QgA", "QiA", "QkA", "QnA", "QqA", "QrA")
+train[revVar] <- train %>% select(revVar) %>% mutate_all(list(~6 - .))
+test[revVar]  <- test %>% select(revVar) %>% mutate_all(list(~6 - .))
+
+#- 2. machia score = 전체 점수의 평균 값 계산
+machiaVar             <- train %>% select(matches("Q.A")) %>%  colnames
+train$machiaScore     <- train %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) 
+test$machiaScore      <- test  %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) 
+
 
 ##############################
 ## 변수타입설정 & 변수 선택 ##
@@ -50,24 +64,30 @@ ordered_var2 <- colnames(train)[grep("tp|wr|wf.", colnames(train))]
 
 #-  변수 제거
 remv_var <- c("index")
-train    <- train %>%  select(-remv_var)
-test     <- test  %>%  select(-remv_var)
+train_f    <- train %>%  select(-remv_var)
+test_f     <- test  %>%  select(-remv_var)
+
+#- 수치형 변수 Q_E --> log 변환
+Q_E.names          <- train_f %>% select(matches("Q.E")) %>%  colnames
+
+train_f[Q_E.names] <- train_f %>% select(matches("Q.E")) %>% mutate_all(list(~log(.)))
+test_f[Q_E.names]  <- test_f  %>% select(matches("Q.E")) %>% mutate_all(list(~log(.)))
 
 #- one-hot encoding (필요시)
 oneHotVar       <- c(factor_var[-9])
-train_fac       <- train %>% select(all_of(oneHotVar))
+train_fac       <- train_f %>% select(all_of(oneHotVar))
 dmy_model       <- caret::dummyVars("~ .", data = train_fac)
 train_oneHot    <- data.frame(predict(dmy_model, train_fac))
 
-train  <- train %>% select(-oneHotVar) 
-train  <- dplyr::bind_cols(train, train_oneHot)
+train_f  <- train_f %>% select(-oneHotVar) 
+train_f  <- dplyr::bind_cols(train_f, train_oneHot)
 
-test_fac       <- test %>% select(all_of(oneHotVar[c(-9)]))
+test_fac       <- test_f %>% select(all_of(oneHotVar[c(-9)]))
 dmy_model      <- caret::dummyVars("~ .", data = test_fac)
 test_oneHot    <- data.frame(predict(dmy_model, test_fac))
 
-test  <- test %>% select(-oneHotVar) 
-test  <- dplyr::bind_cols(test, test_oneHot)
+test_f  <- test_f %>% select(-oneHotVar) 
+test_f  <- dplyr::bind_cols(test_f, test_oneHot)
 
 rm(ls = test_oneHot)
 rm(ls = train_oneHot)
@@ -78,16 +98,16 @@ rm(ls = test_fac)
 ## 모델링 ##
 ############
 set.seed(1)
-trainIdx <- createDataPartition(train[,"voted"], p = 0.7, list = F)
-trainData <- train[ trainIdx, ]
-testData  <- train[-trainIdx, ]
+trainIdx <- createDataPartition(train_f[,"voted"], p = 0.7, list = F)
+trainData <- train_f[ trainIdx, ]
+testData  <- train_f[-trainIdx, ]
 
 ## final 제출시, 적용
-trainData <- train
-testData  <- test
+# trainData <- train_f
+# testData  <- test_f
 
-rm(ls = train)
-rm(ls = test)
+rm(ls = train_f)
+rm(ls = test_f)
 
 #################
 ## 5. LightGBM ##
@@ -95,15 +115,13 @@ rm(ls = test)
 varnames     = setdiff(colnames(trainData), c("voted"))
 train_sparse = Matrix(as.matrix(trainData[, varnames]), sparse=TRUE)
 test_sparse  = Matrix(as.matrix(testData[,  varnames]), sparse=TRUE)
-
-y_train = trainData[, c("voted")]
+y_train      = trainData[, c("voted")]
 
 # binary, auc 계산시, 반드시 Y 값은 0 또는 1이어야 함
 train.lgb <- lgb.Dataset(data  = train_sparse, label = ifelse(y_train == 2, 1, 0))
 test.lgb  <- lgb.Dataset(data  = test_sparse)
 
 categoricals.vec <- c(ordered_var1, ordered_var2)
-# categoricals.vec <- c(categoricals.vec, colnames(trainData)[grep(paste(oneHotVar, collapse = "|"), colnames(trainData))])
 
 lgb.grid = list(objective = "binary",
                 metric    = "auc",
@@ -144,9 +162,7 @@ lgb.model.cv = lgb.cv(
   nfold                 = 10,
   stratified            = TRUE)
 
-
 best.iter = lgb.model.cv$best_iter
-# best.iter = 295
 
 lgb_model = lgb.train(
   params              = lgb.grid, 
@@ -157,10 +173,10 @@ lgb_model = lgb.train(
   nrounds             = best.iter,                   #- *** 계속 나무를 반복하며 부스팅을 하는데 몇번을 할것인가이다. 1000이상정도는 해주도록 함
   #-     early_stopping이 있으면 최대한 많이 줘도 (10,000~)별 상관이 없음
   eval_freq           = 20, 
-  eval                = lgb.normalizedgini)
-#categorical_feature = categoricals.vec)
+  eval                = lgb.normalizedgini,
+ categorical_feature = categoricals.vec)
 
-save(lgb.model, file = "lgb_model.RData")
+save(lgb_model, file = "lgb_model.RData")
 # load("lgb_model.RData")
 
 #- Create and Submit Predictions 
@@ -171,4 +187,17 @@ AUC_lgbm <- mkAUCValue(
   Y    = ifelse(testData$voted == 2, 1, 0))
 
 
+caret::confusionMatrix(
+  factor(ifelse(YHat_lgbm <= 0.5, 0, 1)),
+  factor(ifelse(testData$voted == 2, 1, 0))
+)
 
+# 투표를 하지 않았는데, 했다고 예측한 testData
+testData_wrong <- testData[!ifelse(YHat_lgbm <= 0.5, 0, 1)  == ifelse(testData$voted == 2, 1, 0),]
+testData_wrong <- testData_wrong[testData_wrong$voted == 2,] #- 
+testData_wrong <- train[as.numeric(row.names(testData_wrong)),]
+
+
+# importance
+tree_imp1 <- lgb.importance(lgb_model, percentage = TRUE)
+View(tree_imp1)

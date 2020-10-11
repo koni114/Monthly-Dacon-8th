@@ -7,7 +7,6 @@ XGBoost AUC  : 07624
 CatBoost AUC : 0.7655
 assemble final : 0.7675025
 
-
 9번
 xgboost + catboost + LightGBM assemble model, 전처리 없음
 
@@ -19,5 +18,3 @@ final        :  0.7696434
 catboost + LightGBM assemble model , 전처리 없음
 
 ## catboost caret package 적용
-
-catboost   : 0.7689403

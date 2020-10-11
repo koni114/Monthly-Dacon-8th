@@ -23,11 +23,24 @@ test  <- data.table::fread(
   data.table = F,
   na.strings = c("NA", "NaN", "NULL", "\\N"))
 
+# ###########################
+# ## 파생변수 생성 및 변경 ##
+# ###########################
+# #- 1. reverse 
+# #- QaA, QdA, QeA, QfA, QgA, QiA, QkA, QnA, QqA, QrA --> reverse 
+# revVar  <- c("QaA", "QdA", "QeA", "QfA", "QgA", "QiA", "QkA", "QnA", "QqA", "QrA")
+# train[revVar] <- train %>% select(revVar) %>% mutate_all(list(~6 - .))
+# test[revVar]  <- test %>% select(revVar) %>% mutate_all(list(~6 - .))
+# 
+# #- 2. machia score = 전체 점수의 평균 값 계산
+# machiaVar             <- train %>% select(matches("Q.A")) %>%  colnames
+# train$machiaScore     <- train %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
+# test$machiaScore      <- test  %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
+
 ##############################
 ## 변수타입설정 & 변수 선택 ##
 ##############################
-#- 수치형 변수 
-num_var <- train %>%  select_if(is.numeric) %>%  colnames 
+colnames(train)
 
 #- 범주형(명목형) 변환
 factor_var <- c("engnat",
@@ -65,8 +78,8 @@ trainData <- train[ trainIdx, ]
 testData  <- train[-trainIdx, ]
 
 ## final 제출시, 적용
-trainData <- train
-testData  <- test
+# trainData <- train
+# testData  <- test
 
 #################
 ## 2. CatBoost ##
@@ -75,10 +88,56 @@ testData  <- test
 trainData_cat <- trainData
 testData_cat  <- testData
 
-levels(trainData_cat$voted) <- c("Yes", "No")
-levels(testData_cat$voted)  <- c("Yes", "No")
+YIdx       <- which(colnames(trainData_cat) %in% c('voted'))
+features   <- trainData_cat[-YIdx]
+labels     <- ifelse(trainData_cat[,YIdx] == 1, 0, 1)
+train_pool <- catboost.load_pool(data = features, label = labels)
 
-yIdx <- which(colnames(trainData_cat) %in% c('voted'))
+# 2. catboost.train 함수를 이용하여 train
+set.seed(1)
+model <- catboost.train(
+  train_pool,                                  #- 학습에 사용하고자 하는 train_pool  
+  NULL,                                        #- 
+  params = list(loss_function = 'Logloss',     #- loss function 지정(여기서는 분류모형이므로 Logloss)
+                random_seed   = 123,           #- seed number
+                custom_loss   = "AUC",         #- 모델링 할 때 추가로 추출할 값들 (train_dir로 지정한 곳으로 해당 결과를 파일로 내보내준다)
+                train_dir     = "./model/CatBoost_R_output", # 모델링 한 결과를 저장할 directory
+                iterations    = 800,                         #- 학습 iteration 수
+                metric_period = 10)            
+)           
+
+# catboost importance 
+catboost_imp           <- data.frame(model$feature_importances)
+catboost_imp$variables <- rownames(model$feature_importances)
+colnames(catboost_imp) <- c("importance", 'variables')
+catboost_imp           <- catboost_imp %>% arrange(-importance)
+View(catboost_imp)
+
+# 3. catboost.predict function
+real_pool  <- catboost.load_pool(testData_cat)
+YHat_cat   <- catboost.predict(
+  model, 
+  real_pool,
+  prediction_type = c('Probability'))  # Probability, Class
+
+caret::confusionMatrix(
+  factor(YHat_cat),
+  factor(ifelse(testData$voted == 2, 1, 0))
+)
+
+AUC_catboost <- mkAUCValue(
+  YHat = YHat_cat, 
+  Y    = ifelse(testData$voted == 2, 1, 0))
+
+
+
+
+
+
+
+
+
+
 
 trControl <- trainControl(
   method = "repeatedcv",
