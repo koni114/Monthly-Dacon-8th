@@ -67,6 +67,43 @@ machiaVar             <- train %>% select(matches("Q.A")) %>%  colnames
 train$machiaScore     <- train %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
 test$machiaScore      <- test  %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
 
+#- 3 wf_mean, wr_mean, voca_mean(실제 단어를 아는 경우(wr)  - 허구인 단어를 아는 경우(wf) / 13)
+wfVar <- train %>% select(matches("wf.")) %>%  colnames
+wrVar <- train %>% select(matches("wr.")) %>%  colnames
+
+#- 3.1 wf_mean
+train$wf_mean <- train %>% select(wfVar) %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+test$wf_mean  <- test %>% select(wfVar)  %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+
+#- 3.2 wr_mean
+train$wr_mean <- train %>% select(wrVar) %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+test$wr_mean  <- test %>% select(wrVar)  %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+
+#- 3.3 voca_mean
+train$voca_mean <- train %>% transmute(voca_mean = round((wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03 / 16), 8)) %>% unlist %>% as.numeric
+test$voca_mean <- test %>% transmute(voca_mean = round((wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03 / 16), 8)) %>% unlist %>% as.numeric
+
+#- tp variable
+tpPs <- c("tp01", "tp03", "tp05", "tp07", "tp09")
+tpNg <- c("tp02", "tp04", "tp06", "tp08", "tp10")
+
+#- 3.4 tp_positive
+train$tp_positive  <- train %>% select(tpPs) %>% transmute(tp_positive = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
+test$tp_positive   <- test  %>% select(tpPs) %>% transmute(tp_positive = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
+
+#- 3.5 tp_negative 
+train$tp_negative  <- train %>% select(tpNg) %>% transmute(tp_negative = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
+test$tp_negative   <- test  %>% select(tpNg) %>% transmute(tp_negative = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
+
+#- 3.6 tp_mean
+train$tp_mean <- train %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (6 - tp02) + (6 - tp04) + (6 - tp06) + (6 - tp08) + (6 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
+test$tp_mean  <- test %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (6 - tp02) + (6 - tp04) + (6 - tp06) + (6 - tp08) + (6 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
+
+#- 3.7 QE_mean
+# QEVar <- train %>% select(matches("Q.E")) %>%  colnames
+# train$QE_mean  <- train %>% select(QEVar) %>% transmute(QE_mean = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
+# test$QE_mean   <- test  %>% select(QEVar) %>% transmute(QE_mean = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
+
 ##############################
 ## 변수타입설정 & 변수 선택 ##
 ##############################
@@ -76,6 +113,7 @@ num_var <- train %>%  select_if(is.numeric) %>%  colnames
 #- 범주형(명목형) 변환
 factor_var <- c("engnat",
                 "age_group",
+                "education",
                 "gender",
                 "hand",
                 "married",
@@ -85,7 +123,7 @@ factor_var <- c("engnat",
                 "voted")
 
 train[factor_var]        <- train %>% select(all_of(factor_var))        %>% mutate_all(as.factor)
-test[factor_var[c(-9)]]  <-  test %>% select(all_of(factor_var[c(-9)])) %>% mutate_all(as.factor)
+test[factor_var[c(-10)]]  <-  test %>% select(all_of(factor_var[c(-10)])) %>% mutate_all(as.factor)
 
 #- 범주형(순서형) 변환
 ordered_var1 <- colnames(train)[grep("Q.A", colnames(train))]
@@ -100,7 +138,7 @@ train    <- train %>%  select(-remv_var)
 test     <- test  %>%  select(-remv_var)
 
 #- one-hot encoding (필요시) -- LightGBM
-oneHotVar       <- c(factor_var[-9])
+oneHotVar       <- c(factor_var[-10])
 train_fac       <- train %>% select(all_of(oneHotVar))
 dmy_model       <- caret::dummyVars("~ .", data = train_fac)
 train_oneHot    <- data.frame(predict(dmy_model, train_fac))
@@ -108,7 +146,7 @@ train_oneHot    <- data.frame(predict(dmy_model, train_fac))
 train  <- train %>% select(-oneHotVar) 
 train  <- dplyr::bind_cols(train, train_oneHot)
 
-test_fac       <- test %>% select(all_of(oneHotVar[c(-9)]))
+test_fac       <- test %>% select(all_of(oneHotVar[c(-10)]))
 dmy_model      <- caret::dummyVars("~ .", data = test_fac)
 test_oneHot    <- data.frame(predict(dmy_model, test_fac))
 
@@ -207,12 +245,12 @@ model <- catboost.train(
   params = list(loss_function = 'Logloss',     #- loss function 지정(여기서는 분류모형이므로 Logloss)
                 random_seed   = 123,           #- seed number
                 custom_loss   = "AUC",         #- 모델링 할 때 추가로 추출할 값들 (train_dir로 지정한 곳으로 해당 결과를 파일로 내보내준다)
-                train_dir     = "./model/CatBoost_R_output", # 모델링 한 결과를 저장할 directory
+                train_dir     = "./model/CatBoost_R_output", #- 모델링 한 결과를 저장할 directory
                 iterations    = 1000,                         #- 학습 iteration 수
                 metric_period = 10)            
 )           
-
 save(model, file = "catBoost_model.RData")
+# load("catBoost_model.RData")
 
 # catboost importance 
 catboost_imp           <- data.frame(model$feature_importances)
@@ -220,13 +258,15 @@ catboost_imp$variables <- rownames(model$feature_importances)
 colnames(catboost_imp) <- c("importance", 'variables')
 catboost_imp           <- catboost_imp %>% arrange(-importance)
 View(catboost_imp)
+catboost_imp$variables
+
 
 # 3. catboost.predict function
 real_pool  <- catboost.load_pool(testData_cat)
 YHat_cat   <- catboost.predict(
   model, 
   real_pool,
-  prediction_type = c('Class'))  # Probability, Class
+  prediction_type = c('Probability'))  # Probability, Class
 
 caret::confusionMatrix(
   factor(YHat_cat),
@@ -400,8 +440,8 @@ save(lgb_model, file = "lgb_model.RData")
 
 #- importance check in R
 tree_imp1  <- lgb.importance(lgb_model, percentage = TRUE)
-tree_imp1
 View(tree_imp1)
+tree_imp1$Feature
 
 #- Create and Submit Predictions
 YHat_lgbm       <- predict(lgb_model, test_sparse)
@@ -424,8 +464,8 @@ save(testData_wrongYes_gbm, file = "testData_wrongYes_LightGBM.RData")
 ## final assemble ##
 ####################
 AUC_final <- mkAUCValue(
-  YHat = (YHat_cat + YHat_lgbm) / 2, 
+  YHat = (YHat_cat * 0.6 + YHat_lgbm) / 2, 
   Y    = ifelse(testData$voted == 2, 1, 0))
 
-sample_submission$voted <- (YHat_cat + YHat_lgbm) / 2
+sample_submission$voted <- ((YHat_cat * 0.6) + (YHat_lgbm * 0.4))
 write.csv(sample_submission, "submission_data.csv", row.names = F)

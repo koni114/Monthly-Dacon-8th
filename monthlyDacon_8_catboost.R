@@ -102,7 +102,7 @@ model <- catboost.train(
                 random_seed   = 123,           #- seed number
                 custom_loss   = "AUC",         #- 모델링 할 때 추가로 추출할 값들 (train_dir로 지정한 곳으로 해당 결과를 파일로 내보내준다)
                 train_dir     = "./model/CatBoost_R_output", # 모델링 한 결과를 저장할 directory
-                iterations    = 800,                         #- 학습 iteration 수
+                iterations    = 100,                      #- 학습 iteration 수
                 metric_period = 10)            
 )           
 

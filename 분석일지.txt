@@ -18,7 +18,6 @@
 ## 6. familysize      : 형제자매 수
 ## 7. gender          : 성별
 ##                      Male, Female
-
 ## 8. hand            : 필기하는 손
 ##                      1=Right, 2=Left, 3=Both, 0=무응답
 ## 9. married         : 혼인 상태
@@ -29,18 +28,18 @@
 ##                      Agnostic, Atheist, Buddhist, Christian_Catholic, Christian_Mormon, 
 ##                      Christian_Protestant, Christian_Other, Hindu, Jewish, Muslim, Sikh, Other
 ## tp__(01~10)        : items were rated "I see myself as:" _____ such that
-##                      tp01 : Extraverted, enthusiastic(외향적이고 열정적입니다)
+##                      tp01 : Extraverted, enthusiastic(외향적이고 열정적입니다)                        - 
 ##                      tp02 : Critical, quarrelsome(비판적이고 논쟁 적입니다)
-##                      tp03 : Dependable, self-disciplined(신뢰할 수 있고 자기 훈련)
+##                      tp03 : Dependable, self-disciplined(신뢰할 수 있고 자기 훈련)                  -
 ##                      tp04 : Anxious, easily upset (불안하고 쉽게 화를 낸다)
-##                      tp05 : Open to new experiences, complex(새로운 경험에 개방적, 복잡한)
+##                      tp05 : Open to new experiences, complex(새로운 경험에 개방적, 복잡한)    -
 ##                      tp06 : Reserved, quiet(내성적이고 조용함)
-##                      tp07 : Sympathetic, warm(공감, 따뜻함)
+##                      tp07 : Sympathetic, warm(공감, 따뜻함)                                                -
 ##                      tp08 : Disorganized, careless(무질서, 부주의)
-##                      tp09 : Calm, emotionally stable(조용하고 정서적으로 안정)
+##                      tp09 : Calm, emotionally stable(조용하고 정서적으로 안정)                       - 
 ##                      tp10 : Conventional, uncreative(관습적이고 비창조적)
 ## urban               : 유년기의 거주 구역
-##                       1=Rural (country side), 2=Suburban, 3=Urban (town, city), 0=무응답
+##                       1 = Rural(country side), 2 = Suburban, 3 = Urban(town, city), 0 = 무응답
 ## wr_(01~13)          : 실존하는 해당 단어의 정의을 앎
 ##                       1=Yes, 0=No
 ## wf_(01~03)          : 허구인 단어의 정의를 앎
@@ -80,9 +79,19 @@ final         :
 
 - 투표를 하지 않았는데(No, 1), 투표를 했다고 예측한 경우, (Yes, 0)
 
-                
-변수 중요도를 파악하여, 변수를 빼는 방향도 생각해보자.
 
+#### voca_mean, wf_mean, wr_mean 파생변수 추가
+catboost   : 0.7700609
+LightGBM :  0.7695492        
+         
+############
+# 2020-10-12 #
+############
+
+#- tp_mean, tp_negative, tp_positive 파생변수 추가
+catboost   : 0.7709819
+LightGBM : 0.7684896    
+         
 
 ##############
 ## Insight 정리 ##
@@ -95,6 +104,7 @@ education > age_group > race > religion > QqE > QsE > QdE > married > QhE > QmE.
 
 - LightGBM 변수 중요도 확인 결과
 age_group, education, race, married, tp06, tp03, tp04
+
  
 
 
