@@ -84,6 +84,8 @@ testData  <- train[-trainIdx, ]
 #################
 ## 2. CatBoost ##
 #################
+##- 기본 catBoost function을 이용한 모델 생성
+
 # voted  1 --> 0, 2 --> 1로 변경 
 trainData_cat <- trainData
 testData_cat  <- testData
@@ -129,15 +131,7 @@ AUC_catboost <- mkAUCValue(
   YHat = YHat_cat, 
   Y    = ifelse(testData$voted == 2, 1, 0))
 
-
-
-
-
-
-
-
-
-
+##- Caret package이 이용한 CatBoost 생성
 
 trControl <- trainControl(
   method = "repeatedcv",

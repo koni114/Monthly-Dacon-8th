@@ -103,6 +103,30 @@ LightGBM Importance
 ## 18번 제출 사항 ##
 #################
 - education 변수 --> 범주형으로 변환
+- 가중치 CatBoost : LightGBM = 6:4 로 부여 후 assemble 
+
+- 데이터 전처리 사항
+  - 앞과 동일
+
+- 최종 Score  : 0.7788
+
+
+
+
+
+
+################
+## 19번 제출 사항 ##
+#################
+- CatBoost seed 값 다르게하여 3개의 모델 생성 후 Assemble
+seed : 1, 123, 2020
+
+- CatBoost Model1 :   0.771478
+- CatBoost Model2 :   0.7721318
+- CatBoost Model3 :   0.7714287
+- Assemble Score   :   0.7729286
+
+
 
 
 
