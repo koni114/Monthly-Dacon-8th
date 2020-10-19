@@ -119,6 +119,10 @@ trainIdx <- createDataPartition(train[,"voted"], p = 0.7, list = F)
 trainData <- train[ trainIdx, ]
 testData  <- train[-trainIdx, ]
 
+trainData['voted'] <- ifelse(trainData[,'voted'] == 1, "Yes", "No")
+testData['voted'] <- ifelse(testData[,'voted'] == 1, "Yes", "No")
+yIdx <- which(colnames(train) %in% 'voted')
+
 ## final 제출시, 적용
 trainData <- train
 testData  <- test
@@ -258,32 +262,49 @@ save(testData_wrongYes, file = "testData_wrongYes_CatBoost.RData")
 ##############
 ## 3. Caret ##
 ##############
-fit_control <- trainControl(method = "cv",
-                            number          = 10, 
-                            verboseIter     = T,
-                            savePredictions = TRUE, 
-                            classProbs      = T)
+fit_control <- caret::trainControl(
+  method          = "cv",
+  search          = 'grid',
+  number          = 10, 
+  verboseIter     = T,
+  savePredictions = TRUE, 
+  classProbs      = T,
+  summaryFunction = prSummary)
 
 grid <- expand.grid(depth = c(4, 6, 8),
-                    learning_rate = 0.1,
-                    iterations = 100,
+                    learning_rate = c(0.1, 0.3, 0.5, 0.7),
+                    iterations = c(400, 600, 800, 1000, 1200),
                     l2_leaf_reg = 1e-3,
                     rsm = 0.95,
-                    border_count = 64)
+                    border_count = 200)
 
-report <- train(x, as.factor(make.names(y)),
-                method = catboost.caret,
-                logging_level = 'Verbose',
-                preProc = NULL,
-                # tuneGrid = grid, 
-                trControl = fit_control)
-
-print(report)
-importance <- varImp(report, scale = FALSE)
-print(importance)
-
+modelResult <- caret::train(
+  trainData[-yIdx], 
+  trainData[,yIdx],
+  method = catboost.caret,
+  metric = "AUC",
+  logging_level = 'Verbose',
+  preProc       = NULL,
+  tuneGrid      = grid,
+  trControl     = fit_control)
 
 
+modelResult$results  # 튜닝별 모델링 결과
+modelResult$bestTune # 최적 파라미터 결과
+
+Yhat_CatBoost <- predict.train(
+  object = modelResult,
+  newdata = testData, 
+  type = c('prob')   
+)
+
+AUC_CatBoost <- mkAUCValue(
+  YHat = Yhat_CatBoost[, 1], 
+  Y    = ifelse(testData$voted == "No", 1, 0))
+
+
+importance <- varImp(modelResult, scale = FALSE)
+importance$importance
 
 
 

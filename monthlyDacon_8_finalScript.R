@@ -7,6 +7,7 @@ source('C:/r/Monthly-Dacon-8th/monthlyDacon_8_common.R')
 ##################
 sample_submission <- data.table::fread(
   "sample_submission.csv",
+  
   stringsAsFactors = F,
   data.table       = F
 )
