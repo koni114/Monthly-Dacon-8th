@@ -1,4 +1,4 @@
-library(dplyr);library(data.table);library(ggplot2);library(outliers);library(plotly)
+library(dplyr);library(data.table);library(ggplot2);library(plotly);library(outliers)
 
 ###############
 ## 컬럼 정보 ##
@@ -77,6 +77,7 @@ factor_var <- c("engnat",
                 "married",
                 "race",
                 "religion",
+                "education"
                 "urban",
                 "voted")
 

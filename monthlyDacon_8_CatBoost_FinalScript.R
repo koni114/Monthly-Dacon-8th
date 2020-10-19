@@ -24,35 +24,6 @@ test  <- data.table::fread(
   na.strings = c("NA", "NaN", "NULL", "\\N"))
 
 
-#################
-## 이상치 처리 ##
-#################
-#- Q_E          :  10000 이상 값들은 전부 중앙값으로 대체
-#- familysize   :  18이상인 데이터에 대해서는 이상치 처리 필요 --> 중앙값으로 대체
-
-Q_E <- c("QaE",  "QbE",   "QcE",  "QdE",  "QeE",  "QfE",  "QgE" 
-         , "QhE",   "QiE" ,  "QjE",  "QkE"  , "QlE",  "QmE",  "QnE" , "QoE",   "QpE" , "QqE",  "QrE" , "QsE" , "QtE") 
-
-train[Q_E] <- train %>% select(matches("Q.E")) %>% mutate_all(~ifelse(.x >= 10000, NA, .x))
-train      <- train %>% mutate(familysize = ifelse(familysize >= 18, NA, familysize)) 
-
-test[Q_E] <- test %>% select(matches("Q.E")) %>% mutate_all(~ifelse(.x >= 10000, NA, .x))
-test      <- test %>% mutate(familysize = ifelse(familysize >= 18, NA, familysize)) 
-
-#################
-## 결측치 처리 ##
-#################
-train <- DMwR::centralImputation(
-  data = train  # 데이터 프레임
-)
-
-test  <- DMwR::centralImputation(
-  data = test  # 데이터 프레임
-)
-
-colSums(is.na(train))
-colSums(is.na(test))
-
 ###########################
 ## 파생변수 생성 및 변경 ##
 ###########################
@@ -95,19 +66,18 @@ test$tp_positive   <- test  %>% select(tpPs) %>% transmute(tp_positive = round(r
 train$tp_negative  <- train %>% select(tpNg) %>% transmute(tp_negative = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
 test$tp_negative   <- test  %>% select(tpNg) %>% transmute(tp_negative = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
 
-#- 3.6 tp_mean
+#- 3.6 tp_variance
+train$tp_var       <- train %>% dplyr::select(c(tpPs, tpNg)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric 
+test$tp_var        <- test %>% dplyr::select(c(tpPs, tpNg)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric 
+
+#- 3.7 tp_mean
 train$tp_mean <- train %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (6 - tp02) + (6 - tp04) + (6 - tp06) + (6 - tp08) + (6 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
 test$tp_mean  <- test %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (6 - tp02) + (6 - tp04) + (6 - tp06) + (6 - tp08) + (6 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
 
-#- 3.7 QE_mean
-# QEVar <- train %>% select(matches("Q.E")) %>%  colnames
-# train$QE_mean  <- train %>% select(QEVar) %>% transmute(QE_mean = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
-# test$QE_mean   <- test  %>% select(QEVar) %>% transmute(QE_mean = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
 
-
-##############################
-## 변수타입설정 & 변수 선택 ##
-##############################
+###############################
+## 변수타입 설정 & 변수 선택 ##
+###############################
 #- 수치형 변수 
 num_var <- train %>%  select_if(is.numeric) %>%  colnames 
 
@@ -128,7 +98,9 @@ test[factor_var[c(-10)]]  <-  test %>% select(all_of(factor_var[c(-10)])) %>% mu
 
 #- 범주형(순서형) 변환
 ordered_var1 <- colnames(train)[grep("Q.A", colnames(train))]
-ordered_var2 <- colnames(train)[grep("tp|wr|wf.", colnames(train))]
+ordered_var2 <- c("tp01","tp02","tp03","tp04","tp05","tp06","tp07" ,"tp08", "tp09" ,"tp10", 
+                  "wf_01" , "wf_02" , "wf_03", "wr_01", "wr_02", "wr_03",  "wr_04", "wr_05", 
+                  "wr_06" , "wr_07", "wr_08","wr_09", "wr_10",  "wr_11", "wr_12" ,"wr_13") 
 
 train[c(ordered_var1, ordered_var2)]   <- train %>% select(all_of(ordered_var1), all_of(ordered_var2)) %>% mutate_all(as.ordered)
 test[c(ordered_var1, ordered_var2) ]   <- test %>% select(all_of(ordered_var1), all_of(ordered_var2)) %>% mutate_all(as.ordered)
@@ -138,26 +110,6 @@ remv_var <- c("index")
 train    <- train %>%  select(-remv_var)
 test     <- test  %>%  select(-remv_var)
 
-#- one-hot encoding (필요시) -- LightGBM
-oneHotVar       <- c(factor_var[-10])
-train_fac       <- train %>% select(all_of(oneHotVar))
-dmy_model       <- caret::dummyVars("~ .", data = train_fac)
-train_oneHot    <- data.frame(predict(dmy_model, train_fac))
-
-train  <- train %>% select(-oneHotVar) 
-train  <- dplyr::bind_cols(train, train_oneHot)
-
-test_fac       <- test %>% select(all_of(oneHotVar[c(-10)]))
-dmy_model      <- caret::dummyVars("~ .", data = test_fac)
-test_oneHot    <- data.frame(predict(dmy_model, test_fac))
-
-test  <- test %>% select(-oneHotVar) 
-test  <- dplyr::bind_cols(test, test_oneHot)
-
-rm(ls = test_oneHot)
-rm(ls = train_oneHot)
-rm(ls = train_fac)
-rm(ls = test_fac)
 
 ############
 ## 모델링 ##
@@ -300,6 +252,40 @@ save(testData_wrongNo, file = "testData_wrongNo_CatBoost.RData")
 #- 투표를 하지 않았는데(No, 1), 투표를 했다고 예측한 경우, (Yes, 0)
 testData_wrongYes <- testData[!YHat_cat  == ifelse(testData$voted == 2, 1, 0),] %>% filter(voted == 2)
 save(testData_wrongYes, file = "testData_wrongYes_CatBoost.RData")
+
+
+
+##############
+## 3. Caret ##
+##############
+fit_control <- trainControl(method = "cv",
+                            number          = 10, 
+                            verboseIter     = T,
+                            savePredictions = TRUE, 
+                            classProbs      = T)
+
+grid <- expand.grid(depth = c(4, 6, 8),
+                    learning_rate = 0.1,
+                    iterations = 100,
+                    l2_leaf_reg = 1e-3,
+                    rsm = 0.95,
+                    border_count = 64)
+
+report <- train(x, as.factor(make.names(y)),
+                method = catboost.caret,
+                logging_level = 'Verbose',
+                preProc = NULL,
+                # tuneGrid = grid, 
+                trControl = fit_control)
+
+print(report)
+importance <- varImp(report, scale = FALSE)
+print(importance)
+
+
+
+
+
 
 ####################
 ## final assemble ##

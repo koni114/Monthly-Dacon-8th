@@ -33,4 +33,8 @@ lgb.normalizedgini = function(preds, dtrain){
   return(list(name = "gini", value = score, higher_better = TRUE))
 }
 
+# row-wise variance
+RowVar <- function(x, ...) {
+  rowSums((x - rowMeans(x, ...))^2, ...)/(dim(x)[2] - 1)
+}
 

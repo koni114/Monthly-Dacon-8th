@@ -38,6 +38,8 @@
 ##                      tp08 : Disorganized, careless(무질서, 부주의)
 ##                      tp09 : Calm, emotionally stable(조용하고 정서적으로 안정)                       - 
 ##                      tp10 : Conventional, uncreative(관습적이고 비창조적)
+##                      --> 1에 가까울수록, 본인의 생각의 정도가 강한 것.
+
 ## urban               : 유년기의 거주 구역
 ##                       1 = Rural(country side), 2 = Suburban, 3 = Urban(town, city), 0 = 무응답
 ## wr_(01~13)          : 실존하는 해당 단어의 정의을 앎

@@ -26,16 +26,54 @@ test  <- data.table::fread(
 # ###########################
 # ## 파생변수 생성 및 변경 ##
 # ###########################
-# #- 1. reverse 
-# #- QaA, QdA, QeA, QfA, QgA, QiA, QkA, QnA, QqA, QrA --> reverse 
-# revVar  <- c("QaA", "QdA", "QeA", "QfA", "QgA", "QiA", "QkA", "QnA", "QqA", "QrA")
-# train[revVar] <- train %>% select(revVar) %>% mutate_all(list(~6 - .))
-# test[revVar]  <- test %>% select(revVar) %>% mutate_all(list(~6 - .))
-# 
-# #- 2. machia score = 전체 점수의 평균 값 계산
-# machiaVar             <- train %>% select(matches("Q.A")) %>%  colnames
-# train$machiaScore     <- train %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
-# test$machiaScore      <- test  %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
+#- 1. reverse 
+#- QaA, QdA, QeA, QfA, QgA, QiA, QkA, QnA, QqA, QrA --> reverse 
+revVar  <- c("QaA", "QdA", "QeA", "QfA", "QgA", "QiA", "QkA", "QnA", "QqA", "QrA")
+train[revVar]  <- train %>% select(revVar) %>% mutate_all(list(~6 - .))
+test[revVar]   <- test %>% select(revVar) %>% mutate_all(list(~6 - .))
+
+#- 2. machia score = 전체 점수의 평균 값 계산
+machiaVar             <- train %>% select(matches("Q.A")) %>%  colnames
+train$machiaScore     <- train %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
+test$machiaScore      <- test  %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
+
+#- 3 wf_mean, wr_mean, voca_mean(실제 단어를 아는 경우(wr)  - 허구인 단어를 아는 경우(wf) / 10)
+wfVar <- train %>% select(matches("wf.")) %>%  colnames
+wrVar <- train %>% select(matches("wr.")) %>%  colnames
+
+#- 3.1 wf_mean
+train$wf_mean <- train %>% select(all_of(wfVar)) %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+test$wf_mean  <- test %>% select(all_of(wfVar))  %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+
+#- 3.2 wr_mean
+train$wr_mean <- train %>% select(all_of(wrVar)) %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+test$wr_mean  <- test %>% select(all_of(wrVar))  %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+
+#- 3.3 voca_mean
+train$voca_mean <- train %>% transmute(voca_mean = round((wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03 / 10), 8)) %>% unlist %>% as.numeric
+test$voca_mean <- test %>% transmute(voca_mean = round((wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03 / 10), 8)) %>% unlist %>% as.numeric
+
+#- tp variable
+tpPs <- c("tp01", "tp03", "tp05", "tp07", "tp09")
+tpNg <- c("tp02", "tp04", "tp06", "tp08", "tp10")
+
+#- 3.4 tp_positive
+train$tp_positive  <- train %>% select(all_of(tpPs)) %>% transmute(tp_positive = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
+test$tp_positive   <- test  %>% select(all_of(tpPs)) %>% transmute(tp_positive = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
+
+#- 3.5 tp_negative 
+train$tp_negative  <- train %>% select(all_of(tpNg)) %>% transmute(tp_negative = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
+test$tp_negative   <- test  %>% select(all_of(tpNg)) %>% transmute(tp_negative = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
+
+#- 3.6 tp_mean
+train$tp_mean <- train %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (6 - tp02) + (6 - tp04) + (6 - tp06) + (6 - tp08) + (6 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
+test$tp_mean  <- test %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (6 - tp02) + (6 - tp04) + (6 - tp06) + (6 - tp08) + (6 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
+
+#- 3.7 QE_mean
+# QEVar <- train %>% select(matches("Q.E")) %>%  colnames
+# train$QE_mean  <- train %>% select(QEVar) %>% transmute(QE_mean = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric
+# test$QE_mean   <- test  %>% select(QEVar) %>% transmute(QE_mean = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric
+
 
 ##############################
 ## 변수타입설정 & 변수 선택 ##

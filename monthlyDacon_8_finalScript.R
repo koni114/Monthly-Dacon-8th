@@ -33,10 +33,12 @@ test  <- data.table::fread(
 Q_E <- c("QaE",  "QbE",   "QcE",  "QdE",  "QeE",  "QfE",  "QgE" 
          , "QhE",   "QiE" ,  "QjE",  "QkE"  , "QlE",  "QmE",  "QnE" , "QoE",   "QpE" , "QqE",  "QrE" , "QsE" , "QtE") 
 
-train[Q_E] <- train %>% select(matches("Q.E")) %>% mutate_all(~ifelse(.x >= 10000, NA, .x))
+tt <- train %>% select(matches("Q.E")) %>% mutate_all(~ifelse(.x >= 100000, max(max(.x[.x < 100000])), .x))
+
+train[Q_E] <- train %>% select(matches("Q.E")) %>% mutate_all(~ifelse(.x >= 100000, max(max(.x[.x < 100000])), .x))
 train      <- train %>% mutate(familysize = ifelse(familysize >= 18, NA, familysize)) 
 
-test[Q_E] <- test %>% select(matches("Q.E")) %>% mutate_all(~ifelse(.x >= 10000, NA, .x))
+test[Q_E] <- test %>% select(matches("Q.E"))%>% mutate_all(~ifelse(.x >= 100000, max(max(.x[.x < 100000])), .x))
 test      <- test %>% mutate(familysize = ifelse(familysize >= 18, NA, familysize)) 
 
 #################
@@ -88,21 +90,21 @@ tpPs <- c("tp01", "tp03", "tp05", "tp07", "tp09")
 tpNg <- c("tp02", "tp04", "tp06", "tp08", "tp10")
 
 #- 3.4 tp_positive
-train$tp_positive  <- train %>% select(tpPs) %>% transmute(tp_positive = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
-test$tp_positive   <- test  %>% select(tpPs) %>% transmute(tp_positive = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
+train$tp_positive  <- train %>% select(all_of(tpPs)) %>% transmute(tp_positive = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
+test$tp_positive   <- test  %>% dplyr::select(all_of(tpPs)) %>% transmute(tp_positive = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
 
 #- 3.5 tp_negative 
-train$tp_negative  <- train %>% select(tpNg) %>% transmute(tp_negative = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
-test$tp_negative   <- test  %>% select(tpNg) %>% transmute(tp_negative = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
+train$tp_negative  <- train %>% dplyr::select(all_of(tpNg)) %>% transmute(tp_negative = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
+test$tp_negative   <- test  %>% dplyr::select(all_of(tpNg)) %>% transmute(tp_negative = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
 
-#- 3.6 tp_mean
-train$tp_mean <- train %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (6 - tp02) + (6 - tp04) + (6 - tp06) + (6 - tp08) + (6 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
-test$tp_mean  <- test %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (6 - tp02) + (6 - tp04) + (6 - tp06) + (6 - tp08) + (6 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
+#- 3.6 tp_variance
+train$tp_var       <- train %>% dplyr::select(c(tpPs, tpNg)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric 
+test$tp_var        <- test %>% dplyr::select(c(tpPs, tpNg)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric 
 
-#- 3.7 QE_mean
-# QEVar <- train %>% select(matches("Q.E")) %>%  colnames
-# train$QE_mean  <- train %>% select(QEVar) %>% transmute(QE_mean = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric
-# test$QE_mean   <- test  %>% select(QEVar) %>% transmute(QE_mean = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric
+#- 3.7 tp_mean
+train$tp_mean <- train %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (7 - tp02) + (7 - tp04) + (7 - tp06) + (7 - tp08) + (7 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
+test$tp_mean  <- test %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (7 - tp02) + (7 - tp04) + (7 - tp06) + (7 - tp08) + (7 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
+
 
 ##############################
 ## 변수타입설정 & 변수 선택 ##
@@ -121,38 +123,38 @@ factor_var <- c("engnat",
                 "urban",
                 "voted")
 
-train[factor_var]        <- train %>% select(all_of(factor_var))        %>% mutate_all(as.factor)
-test[factor_var[c(-10)]]  <-  test %>% select(all_of(factor_var[c(-10)])) %>% mutate_all(as.factor)
+train[factor_var]        <- train %>% dplyr::select(all_of(factor_var))        %>% mutate_all(as.factor)
+test[factor_var[c(-10)]]  <-  test %>% dplyr::select(all_of(factor_var[c(-10)])) %>% mutate_all(as.factor)
 
 #- 범주형(순서형) 변환
 ordered_var1 <- colnames(train)[grep("Q.A", colnames(train))]
 ordered_var2 <- c("tp01","tp02","tp03","tp04","tp05","tp06","tp07" ,"tp08", "tp09" ,"tp10", 
-                  "wf_01" , "wf_02" , "wf_03", "wr_01", "wr_02", "wr_03",  "wr_04", "wr_05", "wr_06" , "wr_07", "wr_08","wr_09", "wr_10",  "wr_11", "wr_12" ,"wr_13")
-
-train[c(ordered_var1, ordered_var2)]   <- train %>% select(all_of(ordered_var1), all_of(ordered_var2)) %>% mutate_all(as.factor)
-test[c(ordered_var1, ordered_var2) ]   <- test %>% select(all_of(ordered_var1), all_of(ordered_var2)) %>% mutate_all(as.factor)
+                  "wf_01" , "wf_02" , "wf_03", "wr_01", "wr_02", "wr_03",  "wr_04", "wr_05", 
+                  "wr_06" , "wr_07", "wr_08","wr_09", "wr_10",  "wr_11", "wr_12" ,"wr_13")               
+                
+train[c(ordered_var1, ordered_var2)]   <- train %>% dplyr::select(all_of(ordered_var1), all_of(ordered_var2)) %>% mutate_all(as.ordered)
+test[c(ordered_var1, ordered_var2) ]   <- test %>% dplyr::select(all_of(ordered_var1), all_of(ordered_var2)) %>% mutate_all(as.ordered)
 
 #-  변수 제거
 remv_var <- c("index")
-train    <- train %>%  select(-remv_var)
-test     <- test  %>%  select(-remv_var)
-
-
+train    <- train %>%  dplyr::select(-all_of(remv_var))
+test     <- test  %>%  dplyr::select(-all_of(remv_var))
+str(train)
 
 #- one-hot encoding (필요시) -- LightGBM
 oneHotVar       <- c(factor_var[-10])
-train_fac       <- train %>% select(all_of(oneHotVar))
+train_fac       <- train %>% dplyr::select(all_of(oneHotVar))
 dmy_model       <- caret::dummyVars("~ .", data = train_fac)
 train_oneHot    <- data.frame(predict(dmy_model, train_fac))
 
-train  <- train %>% select(-oneHotVar) 
+train  <- train %>% dplyr::select(-oneHotVar) 
 train  <- dplyr::bind_cols(train, train_oneHot)
 
-test_fac       <- test %>% select(all_of(oneHotVar[c(-10)]))
+test_fac       <- test %>% dplyr::select(all_of(oneHotVar[c(-10)]))
 dmy_model      <- caret::dummyVars("~ .", data = test_fac)
 test_oneHot    <- data.frame(predict(dmy_model, test_fac))
 
-test  <- test %>% select(-oneHotVar) 
+test  <- test %>% dplyr::select(-oneHotVar) 
 test  <- dplyr::bind_cols(test, test_oneHot)
 
 rm(ls = test_oneHot)
@@ -163,7 +165,6 @@ rm(ls = test_fac)
 ############
 ## 모델링 ##
 ############
-str(train)
 set.seed(1)
 trainIdx <- createDataPartition(train[,"voted"], p = 0.7, list = F)
 trainData <- train[ trainIdx, ]
@@ -242,7 +243,7 @@ train_pool <- catboost.load_pool(data = features, label = labels)
 
 # 2. catboost.train 함수를 이용하여 train
 set.seed(1)
-model <- catboost.train(
+model_1 <- catboost.train(
   train_pool,                                  #- 학습에 사용하고자 하는 train_pool  
   NULL,                                        #- 
   params = list(loss_function = 'Logloss',     #- loss function 지정(여기서는 분류모형이므로 Logloss)
@@ -251,25 +252,53 @@ model <- catboost.train(
                 train_dir     = "./model/CatBoost_R_output", #- 모델링 한 결과를 저장할 directory
                 iterations    = 1000,                         #- 학습 iteration 수
                 metric_period = 10)            
-)           
-save(model, file = "catBoost_model.RData")
-# load("catBoost_model.RData")
+)
 
-# catboost importance 
-catboost_imp           <- data.frame(model$feature_importances)
-catboost_imp$variables <- rownames(model$feature_importances)
-colnames(catboost_imp) <- c("importance", 'variables')
-catboost_imp           <- catboost_imp %>% arrange(-importance)
-View(catboost_imp)
-catboost_imp$variables
+model_2 <- catboost.train(
+  train_pool,                                  #- 학습에 사용하고자 하는 train_pool  
+  NULL,                                        #- 
+  params = list(loss_function = 'Logloss',     #- loss function 지정(여기서는 분류모형이므로 Logloss)
+                random_seed   = 1,             #- seed number
+                custom_loss   = "AUC",         #- 모델링 할 때 추가로 추출할 값들 (train_dir로 지정한 곳으로 해당 결과를 파일로 내보내준다)
+                train_dir     = "./model/CatBoost_R_output", #- 모델링 한 결과를 저장할 directory
+                iterations    = 1000,                         #- 학습 iteration 수
+                metric_period = 10)            
+)
 
+model_3 <- catboost.train(
+  train_pool,                                  #- 학습에 사용하고자 하는 train_pool  
+  NULL,                                        #- 
+  params = list(loss_function = 'Logloss',     #- loss function 지정(여기서는 분류모형이므로 Logloss)
+                random_seed   = 2020,          #- seed number
+                custom_loss   = "AUC",         #- 모델링 할 때 추가로 추출할 값들 (train_dir로 지정한 곳으로 해당 결과를 파일로 내보내준다)
+                train_dir     = "./model/CatBoost_R_output", #- 모델링 한 결과를 저장할 directory
+                iterations    = 1000,                         #- 학습 iteration 수
+                metric_period = 10)            
+)
 
 # 3. catboost.predict function
-real_pool  <- catboost.load_pool(testData_cat)
-YHat_cat   <- catboost.predict(
-  model, 
+real_pool    <- catboost.load_pool(testData_cat)
+YHat_cat_1   <- catboost.predict(
+   model_1, 
   real_pool,
   prediction_type = c('Probability'))  # Probability, Class
+
+YHat_cat_2   <- catboost.predict(
+  model_2, 
+  real_pool,
+  prediction_type = c('Probability'))  # Probability, Class
+
+YHat_cat_3   <- catboost.predict(
+  model_3, 
+  real_pool,
+  prediction_type = c('Probability'))  # Probability, Class
+
+# catboost importance 
+catboost_imp           <- data.frame(model_1$feature_importances)
+catboost_imp$variables <- rownames(model_1$feature_importances)
+colnames(catboost_imp) <- c("importance", 'variables')
+catboost_imp           <- catboost_imp %>% arrange(-importance)
+catboost_imp$variables
 
 caret::confusionMatrix(
   factor(YHat_cat),
@@ -277,7 +306,7 @@ caret::confusionMatrix(
 )
 
 AUC_catboost <- mkAUCValue(
-  YHat = YHat_cat, 
+  YHat = (YHat_cat_1 + YHat_cat_2, + YHat_cat_3) / 3, 
   Y    = ifelse(testData$voted == 2, 1, 0))
 
 #- 투표를 했는데,(Yes, 0), 투표를 하지 않았다고 예측한 경우,(No, 1)
@@ -382,9 +411,7 @@ y_train = trainData[, c("voted")]
 # binary, auc 계산시, 반드시 Y 값은 0 또는 1이어야 함
 train.lgb <- lgb.Dataset(data  = train_sparse, label = ifelse(y_train == 2, 1, 0))
 test.lgb  <- lgb.Dataset(data  = test_sparse)
-
 categoricals.vec <- c(ordered_var1, ordered_var2)
-categoricals.vec <- categoricals.vec[categoricals.vec %in% gbm_feature70]
 
 lgb.grid = list(objective = "binary",
                 metric    = "auc",
@@ -433,7 +460,7 @@ lgb_model = lgb.train(
   data                = train.lgb, 
   learning_rate       = 0.02,                        #- *** 훈련량  
   #num_leaves          = 25,                          #- * 트리가 가질수 있는 최대 잎사귀 수
-  num_threads         = 2,                          #- * 병렬처리시 처리할 쓰레드
+  num_threads         = 2,                            #- * 병렬처리시 처리할 쓰레드
   nrounds             = best.iter,                   #- *** 계속 나무를 반복하며 부스팅을 하는데 몇번을 할것인가이다. 1000이상정도는 해주도록 함
   #-     early_stopping이 있으면 최대한 많이 줘도 (10,000~)별 상관이 없음
   eval_freq           = 20, 
@@ -445,6 +472,8 @@ save(lgb_model, file = "lgb_model.RData")
 #- importance check in R
 tree_imp1  <- lgb.importance(lgb_model, percentage = TRUE)
 View(tree_imp1)
+tree_imp1$Feature
+
 
 #- Create and Submit Predictions
 YHat_lgbm       <- predict(lgb_model, test_sparse)
@@ -470,5 +499,5 @@ AUC_final <- mkAUCValue(
   YHat = (YHat_cat * 0.6 + YHat_lgbm) / 2, 
   Y    = ifelse(testData$voted == 2, 1, 0))
 
-sample_submission$voted <- ((YHat_cat * 0.6) + (YHat_lgbm * 0.4))
+sample_submission$voted <- (YHat_cat)
 write.csv(sample_submission, "submission_data.csv", row.names = F)
