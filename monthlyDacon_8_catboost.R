@@ -2,6 +2,8 @@ library(DMwR);library(dplyr);library(data.table);library(caret);library(catboost
 setwd("C:/r/Monthly-Dacon-8th/")
 source('C:/r/Monthly-Dacon-8th/monthlyDacon_8_common.R')
 
+str(train)
+
 ##################
 ## Data Loading ##
 ##################
@@ -29,29 +31,29 @@ test  <- data.table::fread(
 #- 1. reverse 
 #- QaA, QdA, QeA, QfA, QgA, QiA, QkA, QnA, QqA, QrA --> reverse 
 revVar  <- c("QaA", "QdA", "QeA", "QfA", "QgA", "QiA", "QkA", "QnA", "QqA", "QrA")
-train[revVar]  <- train %>% select(revVar) %>% mutate_all(list(~6 - .))
-test[revVar]   <- test %>% select(revVar) %>% mutate_all(list(~6 - .))
+train[revVar] <- train %>% select(revVar) %>% mutate_all(list(~6 - .))
+test[revVar]  <- test %>% select(revVar) %>% mutate_all(list(~6 - .))
 
 #- 2. machia score = 전체 점수의 평균 값 계산
 machiaVar             <- train %>% select(matches("Q.A")) %>%  colnames
 train$machiaScore     <- train %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
 test$machiaScore      <- test  %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
 
-#- 3 wf_mean, wr_mean, voca_mean(실제 단어를 아는 경우(wr)  - 허구인 단어를 아는 경우(wf) / 10)
+#- 3 wf_mean, wr_mean, voca_mean(실제 단어를 아는 경우(wr)  - 허구인 단어를 아는 경우(wf) / 13)
 wfVar <- train %>% select(matches("wf.")) %>%  colnames
 wrVar <- train %>% select(matches("wr.")) %>%  colnames
 
 #- 3.1 wf_mean
-train$wf_mean <- train %>% select(all_of(wfVar)) %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
-test$wf_mean  <- test %>% select(all_of(wfVar))  %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+train$wf_mean <- train %>% select(wfVar) %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+test$wf_mean  <- test %>% select(wfVar)  %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
 
 #- 3.2 wr_mean
-train$wr_mean <- train %>% select(all_of(wrVar)) %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
-test$wr_mean  <- test %>% select(all_of(wrVar))  %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+train$wr_mean <- train %>% select(wrVar) %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+test$wr_mean  <- test %>% select(wrVar)  %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
 
 #- 3.3 voca_mean
-train$voca_mean <- train %>% transmute(voca_mean = round((wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03 / 10), 8)) %>% unlist %>% as.numeric
-test$voca_mean <- test %>% transmute(voca_mean = round((wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03 / 10), 8)) %>% unlist %>% as.numeric
+train$voca_mean <- train %>% transmute(voca_mean = round((wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03 / 16), 8)) %>% unlist %>% as.numeric
+test$voca_mean <- test %>% transmute(voca_mean = round((wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03 / 16), 8)) %>% unlist %>% as.numeric
 
 #- tp variable
 tpPs <- c("tp01", "tp03", "tp05", "tp07", "tp09")
@@ -59,30 +61,29 @@ tpNg <- c("tp02", "tp04", "tp06", "tp08", "tp10")
 
 #- 3.4 tp_positive
 train$tp_positive  <- train %>% select(all_of(tpPs)) %>% transmute(tp_positive = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
-test$tp_positive   <- test  %>% select(all_of(tpPs)) %>% transmute(tp_positive = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
+test$tp_positive   <- test  %>% dplyr::select(all_of(tpPs)) %>% transmute(tp_positive = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
 
 #- 3.5 tp_negative 
-train$tp_negative  <- train %>% select(all_of(tpNg)) %>% transmute(tp_negative = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
-test$tp_negative   <- test  %>% select(all_of(tpNg)) %>% transmute(tp_negative = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
+train$tp_negative  <- train %>% dplyr::select(all_of(tpNg)) %>% transmute(tp_negative = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
+test$tp_negative   <- test  %>% dplyr::select(all_of(tpNg)) %>% transmute(tp_negative = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
 
-#- 3.6 tp_mean
-train$tp_mean <- train %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (6 - tp02) + (6 - tp04) + (6 - tp06) + (6 - tp08) + (6 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
-test$tp_mean  <- test %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (6 - tp02) + (6 - tp04) + (6 - tp06) + (6 - tp08) + (6 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
+#- 3.6 tp_variance
+train$tp_var       <- train %>% dplyr::select(c(tpPs, tpNg)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric 
+test$tp_var        <- test %>% dplyr::select(c(tpPs, tpNg)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric 
 
-#- 3.7 QE_mean
-# QEVar <- train %>% select(matches("Q.E")) %>%  colnames
-# train$QE_mean  <- train %>% select(QEVar) %>% transmute(QE_mean = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric
-# test$QE_mean   <- test  %>% select(QEVar) %>% transmute(QE_mean = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric
-
+#- 3.7 tp_mean
+train$tp_mean <- train %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (7 - tp02) + (7 - tp04) + (7 - tp06) + (7 - tp08) + (7 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
+test$tp_mean  <- test %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (7 - tp02) + (7 - tp04) + (7 - tp06) + (7 - tp08) + (7 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
 
 ##############################
 ## 변수타입설정 & 변수 선택 ##
 ##############################
-colnames(train)
+#- 수치형 변수 
 
 #- 범주형(명목형) 변환
 factor_var <- c("engnat",
                 "age_group",
+                "education",
                 "gender",
                 "hand",
                 "married",
@@ -91,21 +92,31 @@ factor_var <- c("engnat",
                 "urban",
                 "voted")
 
-train[factor_var]        <- train %>% select(all_of(factor_var))        %>% mutate_all(as.factor)
-test[factor_var[c(-9)]]  <-  test %>% select(all_of(factor_var[c(-9)])) %>% mutate_all(as.factor)
+
+# for(i in factor_var){
+#   encode      <- CatEncoders::LabelEncoder.fit( train[,i])
+#   train[,i]   <- CatEncoders::transform(encode, train[,i])
+#   
+#   if(i  != 'voted'){
+#     encode      <- CatEncoders::LabelEncoder.fit(test[,i])
+#     test[,i]    <- CatEncoders::transform(encode, test[,i])
+#   }
+# }
+
+train[factor_var]        <- train %>% dplyr::select(all_of(factor_var))        %>% mutate_all(as.factor)
+test[factor_var[c(-10)]]  <-  test %>% dplyr::select(all_of(factor_var[c(-10)])) %>% mutate_all(as.factor)
 
 #- 범주형(순서형) 변환
 ordered_var1 <- colnames(train)[grep("Q.A", colnames(train))]
 ordered_var2 <- colnames(train)[grep("tp|wr|wf.", colnames(train))]
 
-train[c(ordered_var1, ordered_var2)]   <- train %>% select(all_of(ordered_var1), all_of(ordered_var2)) %>% mutate_all(as.ordered)
-test[c(ordered_var1, ordered_var2) ]   <- test %>% select(all_of(ordered_var1), all_of(ordered_var2)) %>% mutate_all(as.ordered)
+train[c(ordered_var1, ordered_var2)]   <- train %>% dplyr::select(all_of(ordered_var1), all_of(ordered_var2)) %>% mutate_all(as.ordered)
+test[c(ordered_var1, ordered_var2) ]   <- test %>% dplyr::select(all_of(ordered_var1), all_of(ordered_var2)) %>% mutate_all(as.ordered)
 
 #-  변수 제거
 remv_var <- c("index")
-train    <- train %>%  select(-remv_var)
-test     <- test  %>%  select(-remv_var)
-
+train    <- train %>%  dplyr::select(-all_of(remv_var))
+test     <- test  %>%  dplyr::select(-all_of(remv_var))
 
 ############
 ## 모델링 ##
@@ -115,9 +126,15 @@ trainIdx <- createDataPartition(train[,"voted"], p = 0.7, list = F)
 trainData <- train[ trainIdx, ]
 testData  <- train[-trainIdx, ]
 
+trainData <- train[ trainIdx, c(finalVar, "voted")]
+testData  <- train[-trainIdx, c(finalVar, "voted")]
+
 ## final 제출시, 적용
-# trainData <- train
-# testData  <- test
+trainData <- train[c(finalVar, "voted")]
+testData  <- test[finalVar]
+
+rm(ls = train)
+rm(ls = test)
 
 #################
 ## 2. CatBoost ##
@@ -141,10 +158,10 @@ model <- catboost.train(
   params = list(loss_function = 'Logloss',     #- loss function 지정(여기서는 분류모형이므로 Logloss)
                 random_seed   = 123,           #- seed number
                 custom_loss   = "AUC",         #- 모델링 할 때 추가로 추출할 값들 (train_dir로 지정한 곳으로 해당 결과를 파일로 내보내준다)
-                train_dir     = "./model/CatBoost_R_output", # 모델링 한 결과를 저장할 directory
-                iterations    = 100,                      #- 학습 iteration 수
+                train_dir     = "./model/CatBoost_R_output", #- 모델링 한 결과를 저장할 directory
+                iterations    = 1000,                         #- 학습 iteration 수
                 metric_period = 10)            
-)           
+)         
 
 # catboost importance 
 catboost_imp           <- data.frame(model$feature_importances)
@@ -152,18 +169,15 @@ catboost_imp$variables <- rownames(model$feature_importances)
 colnames(catboost_imp) <- c("importance", 'variables')
 catboost_imp           <- catboost_imp %>% arrange(-importance)
 View(catboost_imp)
+catboost_imp$variables
 
-# 3. catboost.predict function
-real_pool  <- catboost.load_pool(testData_cat)
+finalVar <- catboost_imp$variables[1:70]
+
+real_pool    <- catboost.load_pool(testData_cat)
 YHat_cat   <- catboost.predict(
   model, 
   real_pool,
   prediction_type = c('Probability'))  # Probability, Class
-
-caret::confusionMatrix(
-  factor(YHat_cat),
-  factor(ifelse(testData$voted == 2, 1, 0))
-)
 
 AUC_catboost <- mkAUCValue(
   YHat = YHat_cat, 

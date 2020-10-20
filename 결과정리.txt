@@ -174,7 +174,49 @@ LightGBM : 0.7689622
   - CatBoost 3번 Assemble
   - LightGBM 3번 Assemble
 
-XX 
+--> 결과는 훨씬 안좋게 나옴..
+
+
+################
+## 22번 제출 사항 ##
+################
+- 데이터 전처리 사항
+  - 
+- 모델링 수행(간단한 특징 작성)
+- 이번 제출 시 가장 특징적인 사항
+  - LightGBM 수행시, 기존 OneHot encoding 수행 --> label Encoding으로 전환 후, 모델 수행시 factor value 지정
+  - 전체 parameter 개수에서, Importance 기준 70개만 추출
+  - CatBoost : LightGBM = 6 : 4
+
+
+CatBoost
+wf_mean, wr_mean 제외. --> 0.7720197
+wf_mean, wr_mean 포함  --> 0.7666145 : label encoding으로 변환해서 그럴수도.. 
+
+ [1] "education"   "age_group"   "race"        "religion"    "wf_mean"     "engnat"      "QqE"         "married"     "QsE"         "QeE"        
+[11] "QoE"         "QkE"         "QhE"         "QqA"         "QpE"         "QmE"         "QgE"         "QjE"         "QfE"         "QiE"        
+[21] "QnE"         "tp06"        "QtE"         "QdE"         "QrE"         "QcE"         "QaE"         "QjA"         "QlE"         "voca_mean"  
+[31] "QbE"         "familysize"  "wr_mean"     "tp_var"      "tp_mean"     "tp09"        "tp02"        "machiaScore" "tp_positive" "QaA"        
+[41] "tp03"        "tp_negative" "QgA"         "QmA"         "tp04"        "QrA"         "QiA"         "tp07"        "QsA"         "urban"      
+[51] "wr_06"       "QbA"         "QkA"         "QpA"         "tp10"        "QcA"         "QdA"         "tp08"        "QoA"         "tp05"       
+[61] "wr_02"       "QfA"         "tp01"        "QtA"         "QeA"         "QnA"         "wr_08"       "QlA"         "QhA"         "wr_13"      
+[71] "hand"        "wf_02"       "wf_03"       "gender"      "wr_11"       "wr_01"       "wr_04"       "wr_05"       "wr_09"       "wr_07"      
+[81] "wf_01"       "wr_03"       "wr_10"       "wr_12"      
+
+LigthGBM
+[1] "age_group"   "education"   "race"        "married"     "religion"    "engnat"      "voca_mean"   "tp06"        "tp09"        "QsE"        
+[11] "tp04"        "QqA"         "machiaScore" "tp03"        "QeE"         "tp01"        "tp02"        "QqE"         "QlE"         "tp_var"     
+[21] "QjE"         "QnE"         "tp07"        "QmE"         "QdE"         "QoE"         "QrE"         "tp08"        "QaE"         "QpE"        
+[31] "wr_06"       "QcE"         "QkE"         "QhE"         "tp_positive" "urban"       "QfE"         "QgE"         "QbE"         "QiE"        
+[41] "familysize"  "QtE"         "tp10"        "QiA"         "QjA"         "QaA"         "QbA"         "tp_mean"     "QkA"         "wf_02"      
+[51] "QrA"         "QsA"         "tp05"        "QoA"         "QgA"         "QfA"         "QcA"         "QpA"         "QdA"         "QeA"        
+[61] "tp_negative" "QtA"         "QhA"         "wr_01"       "QmA"         "wr_11"       "QnA"         "wr_09"       "QlA"         "wf_01"      
+[71] "gender"      "wf_03"       "wr_03"       "wr_05"       "hand"        "wr_02"       "wr_13"       "wr_04"       "wr_10"       "wf_mean"    
+[81] "wr_mean"    
+
+최종 Socore : 0.77937
+
+
 
 
 

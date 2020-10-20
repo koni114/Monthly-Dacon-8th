@@ -75,12 +75,12 @@ wfVar <- train %>% select(matches("wf.")) %>%  colnames
 wrVar <- train %>% select(matches("wr.")) %>%  colnames
 
 #- 3.1 wf_mean
-train$wf_mean <- train %>% select(wfVar) %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
-test$wf_mean  <- test %>% select(wfVar)  %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+# train$wf_mean <- train %>% select(wfVar) %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+# test$wf_mean  <- test %>% select(wfVar)  %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
 
 #- 3.2 wr_mean
-train$wr_mean <- train %>% select(wrVar) %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
-test$wr_mean  <- test %>% select(wrVar)  %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+# train$wr_mean <- train %>% select(wrVar) %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+# test$wr_mean  <- test %>% select(wrVar)  %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
 
 #- 3.3 voca_mean
 train$voca_mean <- train %>% transmute(voca_mean = round((wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03 / 16), 8)) %>% unlist %>% as.numeric
@@ -129,10 +129,8 @@ test[factor_var[c(-10)]]  <-  test %>% dplyr::select(all_of(factor_var[c(-10)]))
 
 #- 범주형(순서형) 변환
 ordered_var1 <- colnames(train)[grep("Q.A", colnames(train))]
-ordered_var2 <- c("tp01","tp02","tp03","tp04","tp05","tp06","tp07" ,"tp08", "tp09" ,"tp10", 
-                  "wf_01" , "wf_02" , "wf_03", "wr_01", "wr_02", "wr_03",  "wr_04", "wr_05", 
-                  "wr_06" , "wr_07", "wr_08","wr_09", "wr_10",  "wr_11", "wr_12" ,"wr_13")               
-                
+ordered_var2 <- colnames(train)[grep("tp|wr|wf.", colnames(train))]
+
 train[c(ordered_var1, ordered_var2)]   <- train %>% dplyr::select(all_of(ordered_var1), all_of(ordered_var2)) %>% mutate_all(as.ordered)
 test[c(ordered_var1, ordered_var2) ]   <- test %>% dplyr::select(all_of(ordered_var1), all_of(ordered_var2)) %>% mutate_all(as.ordered)
 
@@ -140,7 +138,6 @@ test[c(ordered_var1, ordered_var2) ]   <- test %>% dplyr::select(all_of(ordered_
 remv_var <- c("index")
 train    <- train %>%  dplyr::select(-all_of(remv_var))
 test     <- test  %>%  dplyr::select(-all_of(remv_var))
-str(train)
 
 #- one-hot encoding (필요시) -- LightGBM
 oneHotVar       <- c(factor_var[-10])
@@ -500,5 +497,5 @@ AUC_final <- mkAUCValue(
   YHat = (YHat_cat * 0.6 + YHat_lgbm) / 2, 
   Y    = ifelse(testData$voted == 2, 1, 0))
 
-sample_submission$voted <- (YHat_cat)
+sample_submission$voted <- (YHat_cat * 0.6) + (YHat_lgbm * 0.4) 
 write.csv(sample_submission, "submission_data.csv", row.names = F)
