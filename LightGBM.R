@@ -57,6 +57,8 @@ model  <- lgb.cv(
 ######################
 ## LightGBM example ##
 ######################
+## Kaggle kernel 참조 example
+
 library(data.table)
 library(Matrix)
 library(dplyr)
@@ -122,12 +124,6 @@ lgb.grid = list(objective = "binary",
                 min_data_in_leaf = 30,
                 is_unbalance = TRUE)
 
-#- Setting up Gini Eval Function
-lgb.normalizedgini = function(preds, dtrain){
-  actual = getinfo(dtrain, "label")
-  score  = MLmetrics::NormalizedGini(preds,actual)
-  return(list(name = "gini", value = score, higher_better = TRUE))
-}
 
 #- Cross Validation
 lgb.model.cv = lgb.cv(
@@ -164,3 +160,5 @@ lgb.model = lgb.train(
 preds = data.table(id=test_ids, target=predict(lgb.model,test_sparse))
 colnames(preds)[1] = "id"
 fwrite(preds, "submission.csv")
+
+########################

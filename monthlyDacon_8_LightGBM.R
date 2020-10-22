@@ -1,6 +1,6 @@
-library(DMwR);library(dplyr);library(data.table);library(caret);library(catboost);library(Matrix);library(ROCR);library(lightgbm);library(CatEncoders)
-setwd("C:/r/Monthly-Dacon-8th/")
-source('C:/r/Monthly-Dacon-8th/monthlyDacon_8_common.R')
+library(DMwR);library(dplyr);library(data.table);library(caret);library(catboost);library(Matrix);library(ROCR);library(lightgbm);library(CatEncoders);library(foreach)
+setwd("C:/r/Monthly-Dacon-8th-master/")
+source('C:/r/Monthly-Dacon-8th-master/monthlyDacon_8_common.R')
 
 ##################
 ## Data Loading ##
@@ -38,6 +38,10 @@ test[revVar]  <- test %>% select(revVar) %>% mutate_all(list(~6 - .))
 machiaVar             <- train %>% select(matches("Q.A")) %>%  colnames
 train$machiaScore     <- train %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
 test$machiaScore      <- test  %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
+
+QAvar <- train %>% select(matches("Q.A")) %>%  colnames
+train$QA_var <- train %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
+test$QA_var  <-  test %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
 
 #- 3 wf_mean, wr_mean, voca_mean(실제 단어를 아는 경우(wr)  - 허구인 단어를 아는 경우(wf) / 13)
 wfVar <- train %>% select(matches("wf.")) %>%  colnames
@@ -117,27 +121,6 @@ remv_var <- c("index")
 train    <- train %>%  dplyr::select(-all_of(remv_var))
 test     <- test  %>%  dplyr::select(-all_of(remv_var))
 
-#- one-hot encoding (필요시) -- LightGBM
-# oneHotVar       <- c(factor_var[-10])
-# train_fac       <- train %>% dplyr::select(all_of(oneHotVar))
-# dmy_model       <- caret::dummyVars("~ .", data = train_fac)
-# train_oneHot    <- data.frame(predict(dmy_model, train_fac))
-# 
-# train  <- train %>% dplyr::select(-oneHotVar) 
-# train  <- dplyr::bind_cols(train, train_oneHot)
-# 
-# test_fac       <- test %>% dplyr::select(all_of(oneHotVar[c(-10)]))
-# dmy_model      <- caret::dummyVars("~ .", data = test_fac)
-# test_oneHot    <- data.frame(predict(dmy_model, test_fac))
-# 
-# test  <- test %>% dplyr::select(-oneHotVar) 
-# test  <- dplyr::bind_cols(test, test_oneHot)
-# 
-# rm(ls = test_oneHot)
-# rm(ls = train_oneHot)
-# rm(ls = train_fac)
-# rm(ls = test_fac)
-
 ############
 ## 모델링 ##
 ############
@@ -166,67 +149,79 @@ test_sparse  = Matrix(as.matrix(testData[,  varnames]), sparse=TRUE)
 y_train = trainData[, c("voted")]
 
 # binary, auc 계산시, 반드시 Y 값은 0 또는 1이어야 함
-train.lgb        <- lgb.Dataset(data  = train_sparse, label = ifelse(y_train == 2, 1, 0))
-test.lgb         <- lgb.Dataset(data  = test_sparse)
+train.lgb        <- lgb.Dataset(data  = Matrix(as.matrix(trainData[, varnames]), sparse=T), label = ifelse(y_train == 2, 1, 0), free_raw_data = FALSE)
+test.lgb         <- lgb.Dataset.create.valid(train.lgb, data =  Matrix(as.matrix(testData[,  varnames]), sparse=T), label = ifelse(testData[c('voted')] == 2, 1, 0))
+valids           <- list(train = train.lgb, test = test.lgb)
+
 categoricals.vec <- c(factor_var[-10], ordered_var1, ordered_var2)
+categoricals.vec <- categoricals.vec[!categoricals.vec %in% c('tp_var')]
 categoricals.vec <- categoricals.vec[categoricals.vec %in% finalVar]
 
-lgb.grid = list(objective = "binary",
-                metric    = "auc",
-                min_sum_hessian_in_leaf = 1,
-                feature_fraction = 0.7,
-                bagging_fraction = 0.7,
-                bagging_freq = 5,
-                #min_data = 100,
-                #max_bin = 50,
-                lambda_l1 = 8,
-                lambda_l2 = 1.3,
-                #min_data_in_bin=100,
-                #min_gain_to_split = 10,
-                #min_data_in_leaf = 30,
-                is_unbalance = F)
+## grid search
+## 1. 훈련량 0.01, 0.02 0.05, 0.07, 0.1
+## 2. 반복량 7000
+## 3. 나무 깊이 3,4,5,6,7
+## 4. 부스팅 방법 gbdt, dart
+grid <- expand.grid(
+  learningRate = c(0.01, 0.02, 0.05, 0.07, 0.1),
+  maxDepth     = c(4, 5, 6, 7),
+  booster      = c('dart', 'gbdt')
+)
 
-#- Cross Validation
-set.seed(1)
-lgb.model.cv = lgb.cv(
-  params                = lgb.grid,
-  data                  = train.lgb,
-  learning_rate         = 0.02,                    #- *** 훈련량
-  #num_leaves            = 25,
-  num_threads           = 2,                       #- * 병렬처리시 처리할 쓰레드
-  nrounds               = 7000,
-  early_stopping_rounds = 50,                      #- ** 더이상 발전이 없으면 그만두게 설정할때 이를 몇번동안 발전이 없으면 그만두게 할지 여부
-  eval_freq             = 20,
-  eval                  = lgb.normalizedgini,
-  categorical_feature   = categoricals.vec,
-  nfold                 = 10,
-  stratified            = TRUE)
+# i <- 1 
+testResult <- foreach(i = 1:nrow(grid), .combine = function(a,b){ rbind(a, b)} )%do% {
+  tryCatch({
+  g <- grid[i, ]
+  learningRate <- g$learningRate
+  maxDepth     <- g$maxDepth
+  booster      <- g$booster
+  
+  lgb.grid = list(objective = "binary",
+                  metric    = "auc",
+                  min_sum_hessian_in_leaf = 1,
+                  feature_fraction = 0.7,
+                  bagging_fraction = 0.7,
+                  bagging_freq = 5,
+                  max_depth    = maxDepth,
+                  #min_data = 100,
+                  #max_bin = 50,
+                  lambda_l1 = 8,
+                  lambda_l2 = 1.3,
+                  #min_data_in_bin=100,
+                  #min_gain_to_split = 10,
+                  #min_data_in_leaf = 30,
+                  is_unbalance = F)
+  
+  set.seed(1)
+  lgb_model = lgb.train(
+    params                = lgb.grid, 
+    data                  = train.lgb, 
+    learning_rate         = learningRate,                        #- *** 훈련량 
+    boosting              = booster,                       #- "gbdt", "rf", "dart" or "goss".
+    # num_leaves          = 25,                          #- * 트리가 가질수 있는 최대 잎사귀 수
+    num_threads           = 2,                           #- * 병렬처리시 처리할 쓰레드
+    nrounds               = 3000,                        #- *** 계속 나무를 반복하며 부스팅을 하는데 몇번을 할것인가이다. 1000이상정도는 해주도록 함
+    valids                = valids,
+    early_stopping_rounds = 50,
+    categorical_feature   = categoricals.vec,
+    eval_freq             = 50,
+    verbose               = -1)
+  
+    bestScore <- lgb_model$best_score
+    
+    #- Create and Submit Predictions
+    YHat_lgbm <- predict(lgb_model, test_sparse)
+    
+    AUC_lgbm  <- mkAUCValue(
+      YHat = YHat_lgbm, 
+      Y    = ifelse(testData$voted == 2, 1, 0))
+  
+    data.frame(learningRate, maxDepth, booster, lgb_model$best_iter, bestScore, AUC_lgbm)
+  }, error = function(err) {return(NULL)})
+}
 
-best.iter = lgb.model.cv$best_iter
-# best.iter = 295
 
-lgb_model = lgb.train(
-  params              = lgb.grid, 
-  data                = train.lgb, 
-  learning_rate       = 0.02,                        #- *** 훈련량  
-  #num_leaves          = 25,                         #- * 트리가 가질수 있는 최대 잎사귀 수
-  num_threads         = 2,                           #- * 병렬처리시 처리할 쓰레드
-  nrounds             = best.iter,                   #- *** 계속 나무를 반복하며 부스팅을 하는데 몇번을 할것인가이다. 1000이상정도는 해주도록 함
-  eval_freq           = 2)
 
-save(lgb_model, file = "lgb_model.RData")
-
-#- importance check in R
-tree_imp1  <- lgb.importance(lgb_model, percentage = TRUE)
-View(tree_imp1)
-finalVar   <- tree_imp1$Feature[1:70]
-
-#- Create and Submit Predictions
-YHat_lgbm       <- predict(lgb_model, test_sparse)
-
-AUC_lgbm <- mkAUCValue(
-  YHat = YHat_lgbm, 
-  Y    = ifelse(testData$voted == 2, 1, 0))
 
 #- 투표를 했는데,(Yes, 0), 투표를 하지 않았다고 예측한 경우,(No, 1)
 testData_wrongNo_gbm  <- testData[!YHat_lgbm_Class  == ifelse(testData$voted == 2, 1, 0),] %>% filter(voted == 1)  

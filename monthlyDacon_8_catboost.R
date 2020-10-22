@@ -1,8 +1,7 @@
 library(DMwR);library(dplyr);library(data.table);library(caret);library(catboost);library(Matrix);library(ROCR);library(lightgbm)
-setwd("C:/r/Monthly-Dacon-8th/")
-source('C:/r/Monthly-Dacon-8th/monthlyDacon_8_common.R')
+setwd("C:/r/Monthly-Dacon-8th-master/")
+source('C:/r/Monthly-Dacon-8th-master//monthlyDacon_8_common.R')
 
-str(train)
 
 ##################
 ## Data Loading ##
@@ -34,6 +33,10 @@ revVar  <- c("QaA", "QdA", "QeA", "QfA", "QgA", "QiA", "QkA", "QnA", "QqA", "QrA
 train[revVar] <- train %>% select(revVar) %>% mutate_all(list(~6 - .))
 test[revVar]  <- test %>% select(revVar) %>% mutate_all(list(~6 - .))
 
+QAvar <- train %>% select(matches("Q.A")) %>%  colnames
+train$QA_var <- train %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
+test$QA_var  <-  test %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
+  
 #- 2. machia score = 전체 점수의 평균 값 계산
 machiaVar             <- train %>% select(matches("Q.A")) %>%  colnames
 train$machiaScore     <- train %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
@@ -78,7 +81,6 @@ test$tp_mean  <- test %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 
 ##############################
 ## 변수타입설정 & 변수 선택 ##
 ##############################
-#- 수치형 변수 
 
 #- 범주형(명목형) 변환
 factor_var <- c("engnat",
@@ -109,6 +111,7 @@ test[factor_var[c(-10)]]  <-  test %>% dplyr::select(all_of(factor_var[c(-10)]))
 #- 범주형(순서형) 변환
 ordered_var1 <- colnames(train)[grep("Q.A", colnames(train))]
 ordered_var2 <- colnames(train)[grep("tp|wr|wf.", colnames(train))]
+# ordered_var2 <- ordered_var2[!ordered_var2 %in% c('wf_mean', 'wr_mean')]
 
 train[c(ordered_var1, ordered_var2)]   <- train %>% dplyr::select(all_of(ordered_var1), all_of(ordered_var2)) %>% mutate_all(as.ordered)
 test[c(ordered_var1, ordered_var2) ]   <- test %>% dplyr::select(all_of(ordered_var1), all_of(ordered_var2)) %>% mutate_all(as.ordered)
@@ -155,13 +158,14 @@ set.seed(1)
 model <- catboost.train(
   train_pool,                                  #- 학습에 사용하고자 하는 train_pool  
   NULL,                                        #- 
-  params = list(loss_function = 'Logloss',     #- loss function 지정(여기서는 분류모형이므로 Logloss)
+  params = list(loss_function = 'AUC',         #- loss function 지정(여기서는 분류모형이므로 Logloss)
                 random_seed   = 123,           #- seed number
                 custom_loss   = "AUC",         #- 모델링 할 때 추가로 추출할 값들 (train_dir로 지정한 곳으로 해당 결과를 파일로 내보내준다)
                 train_dir     = "./model/CatBoost_R_output", #- 모델링 한 결과를 저장할 directory
                 iterations    = 1000,                         #- 학습 iteration 수
                 metric_period = 10)            
 )         
+
 
 # catboost importance 
 catboost_imp           <- data.frame(model$feature_importances)
@@ -170,6 +174,7 @@ colnames(catboost_imp) <- c("importance", 'variables')
 catboost_imp           <- catboost_imp %>% arrange(-importance)
 View(catboost_imp)
 catboost_imp$variables
+catboost_imp$importance
 
 finalVar <- catboost_imp$variables[1:70]
 
