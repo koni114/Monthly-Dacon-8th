@@ -7,7 +7,6 @@ source('C:/r/Monthly-Dacon-8th/monthlyDacon_8_common.R')
 ##################
 sample_submission <- data.table::fread(
   "sample_submission.csv",
-  
   stringsAsFactors = F,
   data.table       = F
 )
@@ -499,3 +498,4 @@ AUC_final <- mkAUCValue(
 
 sample_submission$voted <- (YHat_cat * 0.6) + (YHat_lgbm * 0.4) 
 write.csv(sample_submission, "submission_data.csv", row.names = F)
+getwd()
