@@ -216,9 +216,57 @@ LigthGBM
 
 최종 Socore : 0.77937
 
+#####################
+## CatBoost Case별 정리 ##
+#####################
+
+- wf_mean, wr_mean, QA_var 수치형, 나머지 범주형 적용        : 0.7707588
+- wf_mean, wr_mean 제거,  QA_var 수치형, 나머지 범주형 적용 : 0.7723143
+- wf_mean, wr_mean, QA_var 제거,  나머지 범주형 적용          : 0.7727475
+- wf_mean, wr_mean, QA_var 제거,  나머지 범주형 적용, 변수 70개로 짜름 :  0.7715074
+- wf_mean, wr_mean, QA_var 제거,  나머지 범주형 적용, 변수 60개로 짜름 :  0.7712863
+
+######################
+## LightGBM Case별 정리 ##
+######################
+
+"wf_mean", "wr_mean",    "tp_positive" "tp_negative" "tp_var", "tp_mean" 범주형, QA_var 수치형,      :  0.7704728
+"wf_mean", "wr_mean",    "tp_positive" "tp_negative", "tp_mean" 범주형,  "tp_var", "QA_var" 수치형,   :  0.770871
+"wf_mean", "wr_mean",    "tp_positive" "tp_negative", "tp_mean" 범주형,  "tp_var", "QA_var" 수치형, 
+parameter 70개로 짜름                                                                                                :  0.7703737
+
 ################
 ## 23번 제출 사항 ##
 ################
+작성 사항.
+- 데이터 전처리 사항
+  CatBoost  : wf_mean, wr_mean, QA_var 제거,  나머지 범주형 적용
+
+[1] "education"   "age_group"   "race"        "religion"    "married"     "QqE"         "QtA"         "QsE"         "engnat"      "QcE"         "QeE"        
+[12] "QoE"         "QgA"         "QrE"         "QhE"         "QpE"         "QiE"         "voca_mean"   "QnE"         "QjE"         "machiaScore" "QmE"        
+[23] "tp_mean"     "QlE"         "QkE"         "QgE"         "QaE"         "QdE"         "QfE"         "tp_var"      "QbE"         "QtE"         "tp02"       
+[34] "tp06"        "QqA"         "familysize"  "tp09"        "QoA"         "wr_06"       "tp04"        "urban"       "tp_positive" "QkA"         "tp08"       
+[45] "tp_negative" "tp03"        "QdA"         "QaA"         "QsA"         "tp07"        "QmA"         "QpA"         "QrA"         "QjA"         "wf_02"      
+[56] "tp10"        "tp05"        "QbA"         "tp01"        "QiA"         "QnA"         "QhA"         "QeA"         "QfA"         "wr_02"       "wf_03"      
+[67] "hand"        "wf_01"       "wr_08"       "QcA"         "gender"      "QlA"         "wr_11"       "wr_01"       "wr_13"       "wr_04"       "wr_09"      
+[78] "wr_03"       "wr_07"       "wr_12"       "wr_05"       "wr_10" 
+
+  LightGBM : 3개 모델 Assemble : 0.7713039 
+                 0.01, 6, gbdt,  811,   :  0.7713741
+                 0.02, 7, gbdt,  341,   :  0.7707429
+                 0.02  6, gbdt,  346   :  0.770953
+
+[1] "age_group"   "education"   "race"        "married"     "religion"    "engnat"      "voca_mean"   "tp06"        "QqA"         "tp09"       
+[11] "tp02"        "QeE"         "QsE"         "tp01"        "QqE"         "tp03"        "tp07"        "machiaScore" "QcE"         "tp_var"     
+[21] "QA_var"      "QlE"         "tp_positive" "tp04"        "QpE"         "tp08"        "QoE"         "QrE"         "QjE"         "QmE"        
+[31] "QaE"         "QhE"         "QnE"         "QgE"         "wr_06"       "QdE"         "QkE"         "QfE"         "urban"       "QbE"        
+[41] "familysize"  "QiE"         "QtE"         "QbA"         "QjA"         "QrA"         "tp10"        "QiA"         "QaA"         "wf_02"      
+[51] "QfA"         "tp05"        "tp_mean"     "QgA"         "tp_negative" "QoA"         "QpA"         "QkA"         "QsA"         "QdA"        
+[61] "QeA"         "QcA"         "QhA"         "wr_01"       "QmA"         "QtA"         "QnA"         "gender"      "wr_11"       "QlA"        
+[71] "wf_01"       "wf_03"       "wr_09"       "wr_05"       "hand"        "wr_02"       "wr_04"       "wr_07"       "wr_13"       "wr_mean"    
+[81] "wr_03"       "wr_10"       "wr_12"      
+> 
+
 
 
 
