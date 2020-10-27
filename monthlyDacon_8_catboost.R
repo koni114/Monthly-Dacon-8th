@@ -1,6 +1,6 @@
 library(DMwR);library(dplyr);library(data.table);library(caret);library(catboost);library(Matrix);library(ROCR);library(lightgbm)
-setwd("C:/r/Monthly-Dacon-8th-master/")
-source('C:/r/Monthly-Dacon-8th-master//monthlyDacon_8_common.R')
+setwd("C:/r/Monthly-Dacon-8th/")
+source('C:/r/Monthly-Dacon-8th/monthlyDacon_8_common.R')
 
 
 ##################
@@ -78,8 +78,13 @@ test$tp_var        <- test %>% dplyr::select(c(tpPs, tpNg)) %>% transmute(test =
 train$tp_mean <- train %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (7 - tp02) + (7 - tp04) + (7 - tp06) + (7 - tp08) + (7 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
 test$tp_mean  <- test %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (7 - tp02) + (7 - tp04) + (7 - tp06) + (7 - tp08) + (7 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
 
+#- 4. final Var
+finalVar <- c("education","age_group","race","religion","QqE", "engnat","married","QsE","QrE","QbE","QjE","QhE","QcE","QpE","QtE","QiE","QoE","QlE","QeE","QkE","QmE","QfE","QaE","tp_var","QgE","tp03","QnE","tp06",  "QdE","tp_positive", "tp_mean",  "tp05",  "machiaScore", "tp02"  ,"voca_mean","QqA","familysize","QpA","QgA" , "tp07","urban","tp09" , "QsA","QmA","QbA","tp08","QtA","tp_negative","QdA","QfA","tp04","QeA",
+"QiA","tp01","tp10",  "wr_06", "QaA","QoA","QjA","wr_02", "QcA","wf_02", "wf_01" ,"wr_11", "gender",
+      "QkA","QrA" ,"hand","QlA","QnA")
+
 ##############################
-## 변수타입설정 & 변수 선택 ##
+##변수타입설정 & 변수 선택 ##
 ##############################
 
 #- 범주형(명목형) 변환
@@ -93,17 +98,6 @@ factor_var <- c("engnat",
                 "religion",
                 "urban",
                 "voted")
-
-
-# for(i in factor_var){
-#   encode      <- CatEncoders::LabelEncoder.fit( train[,i])
-#   train[,i]   <- CatEncoders::transform(encode, train[,i])
-#   
-#   if(i  != 'voted'){
-#     encode      <- CatEncoders::LabelEncoder.fit(test[,i])
-#     test[,i]    <- CatEncoders::transform(encode, test[,i])
-#   }
-# }
 
 train[factor_var]        <- train %>% dplyr::select(all_of(factor_var))        %>% mutate_all(as.factor)
 test[factor_var[c(-10)]]  <-  test %>% dplyr::select(all_of(factor_var[c(-10)])) %>% mutate_all(as.factor)
@@ -166,9 +160,10 @@ model <- catboost.train(
                 custom_loss   = "AUC",         #- 모델링 할 때 추가로 추출할 값들 (train_dir로 지정한 곳으로 해당 결과를 파일로 내보내준다)
                 train_dir     = "./model/CatBoost_R_output", #- 모델링 한 결과를 저장할 directory
                 iterations    = 1000,                         #- 학습 iteration 수
-                metric_period = 10)            
+                metric_period = 10)
 )         
 
+save(model, file = "catboost_version24.RData")
 
 # catboost importance 
 catboost_imp           <- data.frame(model$feature_importances)
@@ -225,6 +220,5 @@ YHat_cat <- predict.train(
 AUC_catboost <- mkAUCValue(
   YHat = YHat_cat[,2], 
   Y    = ifelse(testData_cat$voted == 'Yes', 1, 0))
-
 
 

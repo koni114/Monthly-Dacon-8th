@@ -493,9 +493,8 @@ save(testData_wrongYes_gbm, file = "testData_wrongYes_LightGBM.RData")
 ## final assemble ##
 ####################
 AUC_final <- mkAUCValue(
-  YHat = (YHat_cat * 0.6 + YHat_lgbm) / 2, 
+  YHat = (YHat_cat * 0.6 + YHat_lgbm * 0.4), 
   Y    = ifelse(testData$voted == 2, 1, 0))
 
-sample_submission$voted <- (YHat_cat * 0.6) + (YHat_lgbm * 0.4) 
+sample_submission$voted <- (YHat_cat) 
 write.csv(sample_submission, "submission_data.csv", row.names = F)
-getwd()

@@ -219,21 +219,24 @@ LigthGBM
 #####################
 ## CatBoost Case별 정리 ##
 #####################
-
 - wf_mean, wr_mean, QA_var 수치형, 나머지 범주형 적용        : 0.7707588
 - wf_mean, wr_mean 제거,  QA_var 수치형, 나머지 범주형 적용 : 0.7723143
+
 - wf_mean, wr_mean, QA_var 제거,  나머지 범주형 적용          : 0.7727475
-- wf_mean, wr_mean, QA_var 제거,  나머지 범주형 적용, 변수 70개로 짜름 :  0.7715074
-- wf_mean, wr_mean, QA_var 제거,  나머지 범주형 적용, 변수 60개로 짜름 :  0.7712863
+- wf_mean, wr_mean, QA_var 제거,  나머지 범주형 적용, 변수 70개로 짜름 : 0.7729025
+- wf_mean, wr_mean, QA_var 제거,  나머지 범주형 적용, 변수 60개로 짜름 : 0.7712863
+
+- wf_mean, wr_mean, QA_var 포함,  tp_var 범주형 처리                        :  0.771833
+- wf_mean, wr_mean, QA_var 포함, 변수 70개로 짜름, tp_var 범주형 처리 :
 
 ######################
 ## LightGBM Case별 정리 ##
 ######################
 
-"wf_mean", "wr_mean",    "tp_positive" "tp_negative" "tp_var", "tp_mean" 범주형, QA_var 수치형,      :  0.7704728
+"wf_mean", "wr_mean",    "tp_positive" "tp_negative" "tp_var", "tp_mean" 범주형, QA_var 수치형,       :  0.7704728
 "wf_mean", "wr_mean",    "tp_positive" "tp_negative", "tp_mean" 범주형,  "tp_var", "QA_var" 수치형,   :  0.770871
-"wf_mean", "wr_mean",    "tp_positive" "tp_negative", "tp_mean" 범주형,  "tp_var", "QA_var" 수치형, 
-parameter 70개로 짜름                                                                                                :  0.7703737
+"wf_mean", "wr_mean",    "tp_positive" "tp_negative", "tp_mean" 범주형,  "tp_var", "QA_var" 수치형,   : parameter 70개로 짜름 :  0.7703737
+                                                                                         
 
 ################
 ## 23번 제출 사항 ##
@@ -267,7 +270,17 @@ parameter 70개로 짜름                                                       
 [81] "wr_03"       "wr_10"       "wr_12"      
 > 
 
+################
+## 24번 제출 사항 ##
+################
+CatBoost  : 
+- wf_mean, wr_mean, QA_var 제거,  나머지 범주형 적용, 변수 70개로 짜름 : 0.7729025
 
+LightGBM :
+- wf_mean, wr_mean, QA_var 제거,  나머지 범주형 적용, : 0.7715455
+
+
+final_score : 0.7735234
 
 
 
