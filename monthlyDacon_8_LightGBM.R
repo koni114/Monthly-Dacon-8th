@@ -1,5 +1,5 @@
 library(DMwR);library(dplyr);library(data.table);library(caret);library(catboost);
-library(Matrix);library(ROCR);library(lightgbm);library(CatEncoders);library(foreach)
+library(Matrix);library(ROCR);library(lightgbm);library(CatEncoders);library(foreach);library(matrixStats)
 setwd("C:/r/Monthly-Dacon-8th/")
 source('C:/r/Monthly-Dacon-8th/monthlyDacon_8_common.R')
 
@@ -79,6 +79,16 @@ test$tp_var        <- test %>% dplyr::select(c(tpPs, tpNg)) %>% transmute(test =
 train$tp_mean <- train %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (7 - tp02) + (7 - tp04) + (7 - tp06) + (7 - tp08) + (7 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
 test$tp_mean  <- test %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (7 - tp02) + (7 - tp04) + (7 - tp06) + (7 - tp08) + (7 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
 
+#- 4. QE derived Var
+#- 4.1 QE_median
+QE_var          <- train %>% select(matches("Q.E")) %>%  colnames
+train$QE_median <- apply(train[, QE_var], 1,  median)
+test$QE_median  <- apply(test[, QE_var], 1,   median)
+
+#- 4.2 QE_median
+train$QE_min <- apply(train[, QE_var], 1,  min)
+test$QE_min  <- apply(test[, QE_var], 1,   min)
+
 ##############################
 ## 변수타입설정 & 변수 선택 ##
 ##############################
@@ -152,14 +162,13 @@ test.lgb         <- lgb.Dataset.create.valid(train.lgb, data = test_sparse, labe
 valids           <- list(train = train.lgb, test = test.lgb)
 categoricals.vec <- c(factor_var[-Y_idx], ordered_var1, ordered_var2, notEncodingFacVar)
 
-
 #######################
 ## 변수 제거 한 경우 ##
 #######################
+set.seed(100)
+trainIdx <- createDataPartition(train[,"voted"], p = 0.7, list = F)
 trainData <- train[ trainIdx, c(finalVar, 'voted')]
 testData  <- train[-trainIdx, c(finalVar, 'voted')]
-
-rm(ls = train)
 
 varnames     = setdiff(colnames(trainData), c("voted"))
 train_sparse = Matrix(as.matrix(trainData[, varnames]), sparse=TRUE)

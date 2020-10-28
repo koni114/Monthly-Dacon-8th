@@ -1,7 +1,7 @@
 library(DMwR);library(dplyr);library(data.table);library(caret);library(catboost);library(Matrix);library(ROCR);library(lightgbm)
 setwd("C:/r/Monthly-Dacon-8th/")
 source('C:/r/Monthly-Dacon-8th/monthlyDacon_8_common.R')
-
+finalVarBoolean <- F
 
 ##################
 ## Data Loading ##
@@ -33,9 +33,9 @@ revVar  <- c("QaA", "QdA", "QeA", "QfA", "QgA", "QiA", "QkA", "QnA", "QqA", "QrA
 train[revVar] <- train %>% select(revVar) %>% mutate_all(list(~6 - .))
 test[revVar]  <- test %>% select(revVar) %>% mutate_all(list(~6 - .))
 
-# QAvar <- train %>% select(matches("Q.A")) %>%  colnames
-# train$QA_var <- train %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
-# test$QA_var  <-  test %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
+QAvar <- train %>% select(matches("Q.A")) %>%  colnames
+train$QA_var <- train %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
+test$QA_var  <-  test %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
   
 #- 2. machia score = 전체 점수의 평균 값 계산
 machiaVar             <- train %>% select(matches("Q.A")) %>%  colnames
@@ -47,12 +47,12 @@ wfVar <- train %>% select(matches("wf.")) %>%  colnames
 wrVar <- train %>% select(matches("wr.")) %>%  colnames
 
 #- 3.1 wf_mean
-# train$wf_mean <- train %>% select(wfVar) %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
-# test$wf_mean  <- test %>% select(wfVar)  %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+train$wf_mean <- train %>% select(wfVar) %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+test$wf_mean  <- test %>% select(wfVar)  %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
 
 #- 3.2 wr_mean
-# train$wr_mean <- train %>% select(wrVar) %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
-# test$wr_mean  <- test %>% select(wrVar)  %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+train$wr_mean <- train %>% select(wrVar) %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+test$wr_mean  <- test %>% select(wrVar)  %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
 
 #- 3.3 voca_mean
 train$voca_mean <- train %>% transmute(voca_mean = round((wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03 / 16), 8)) %>% unlist %>% as.numeric
@@ -78,10 +78,15 @@ test$tp_var        <- test %>% dplyr::select(c(tpPs, tpNg)) %>% transmute(test =
 train$tp_mean <- train %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (7 - tp02) + (7 - tp04) + (7 - tp06) + (7 - tp08) + (7 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
 test$tp_mean  <- test %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (7 - tp02) + (7 - tp04) + (7 - tp06) + (7 - tp08) + (7 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
 
-#- 4. final Var
-finalVar <- c("education","age_group","race","religion","QqE", "engnat","married","QsE","QrE","QbE","QjE","QhE","QcE","QpE","QtE","QiE","QoE","QlE","QeE","QkE","QmE","QfE","QaE","tp_var","QgE","tp03","QnE","tp06",  "QdE","tp_positive", "tp_mean",  "tp05",  "machiaScore", "tp02"  ,"voca_mean","QqA","familysize","QpA","QgA" , "tp07","urban","tp09" , "QsA","QmA","QbA","tp08","QtA","tp_negative","QdA","QfA","tp04","QeA",
-"QiA","tp01","tp10",  "wr_06", "QaA","QoA","QjA","wr_02", "QcA","wf_02", "wf_01" ,"wr_11", "gender",
-      "QkA","QrA" ,"hand","QlA","QnA")
+#- 4. QE derived Var
+#- 4.1 QE_median
+QE_var          <- train %>% select(matches("Q.E")) %>%  colnames
+train$QE_median <- apply(train[, QE_var], 1,  median)
+test$QE_median  <- apply(test[, QE_var], 1,   median)
+
+# #- 4.2 QE_median
+train$QE_min <- apply(train[, QE_var], 1,  min)
+test$QE_min  <- apply(test[, QE_var], 1,   min)
 
 ##############################
 ##변수타입설정 & 변수 선택 ##
@@ -99,16 +104,28 @@ factor_var <- c("engnat",
                 "urban",
                 "voted")
 
-train[factor_var]        <- train %>% dplyr::select(all_of(factor_var))        %>% mutate_all(as.factor)
-test[factor_var[c(-10)]]  <-  test %>% dplyr::select(all_of(factor_var[c(-10)])) %>% mutate_all(as.factor)
+orderedFacVar <- c(
+  "wf_mean", 
+  "wr_mean" ,
+  "voca_mean",
+  "machiaScore",
+  "tp_positive",
+  "tp_negative",
+  # "tp_var",
+  "tp_mean"
+)
+
+Y_idx <- which(factor_var %in% c('voted'))
+train[factor_var]         <- train %>% dplyr::select(all_of(factor_var))        %>% mutate_all(as.factor)
+test[factor_var[-Y_idx]]  <-  test %>% dplyr::select(all_of(factor_var[-Y_idx])) %>% mutate_all(as.factor)
 
 #- 범주형(순서형) 변환
 ordered_var1 <- colnames(train)[grep("Q.A", colnames(train))]
-ordered_var2 <- colnames(train)[grep("tp|wr|wf.", colnames(train))]
-# ordered_var2 <- ordered_var2[!ordered_var2 %in% c('wf_mean', 'wr_mean')]
+ordered_var2 <- colnames(train)[grep("tp.[0-9]|wr.[0-9]|wf.[0-9]", colnames(train))]
 
-train[c(ordered_var1, ordered_var2)]   <- train %>% dplyr::select(all_of(ordered_var1), all_of(ordered_var2)) %>% mutate_all(as.ordered)
-test[c(ordered_var1, ordered_var2) ]   <- test %>% dplyr::select(all_of(ordered_var1), all_of(ordered_var2)) %>% mutate_all(as.ordered)
+train[c(ordered_var1, ordered_var2, orderedFacVar)]   <- train %>% dplyr::select(all_of(ordered_var1), all_of(ordered_var2), all_of(orderedFacVar)) %>% mutate_all(as.ordered)
+test[c(ordered_var1, ordered_var2, orderedFacVar) ]   <- test %>% dplyr::select(all_of(ordered_var1), all_of(ordered_var2), all_of(orderedFacVar)) %>% mutate_all(as.ordered)
+
 
 #-  변수 제거
 remv_var <- c("index")
@@ -118,29 +135,29 @@ test     <- test  %>%  dplyr::select(-all_of(remv_var))
 ############
 ## 모델링 ##
 ############
-set.seed(1)
-trainIdx <- createDataPartition(train[,"voted"], p = 0.7, list = F)
-trainData <- train[ trainIdx, ]
-testData  <- train[-trainIdx, ]
+#########################
+## 변수 제거 안한 경우 ##
+#########################
+if(finalVarBoolean){
+  set.seed(1)
+  trainIdx <- createDataPartition(train[,"voted"], p = 0.7, list = F)
+  trainData <- train[ trainIdx, c(finalVar, "voted")]
+  testData  <- train[-trainIdx, c(finalVar, "voted")]
+}else{
+  set.seed(1)
+  trainIdx <- createDataPartition(train[,"voted"], p = 0.7, list = F)
+  trainData <- train[ trainIdx, ]
+  testData  <- train[-trainIdx, ]
+}
 
-trainData <- train[ trainIdx, c(finalVar, "voted")]
-testData  <- train[-trainIdx, c(finalVar, "voted")]
-
-## final 제출시, 적용
-trainData <- train
-testData  <- test
-
-trainData <- train[c(finalVar, "voted")]
-testData  <- test[finalVar]
-
-rm(ls = train)
-rm(ls = test)
+#######################
+## 변수 제거 한 경우 ##
+#######################
 
 #################
 ## 2. CatBoost ##
 #################
 ##- 기본 catBoost function을 이용한 모델 생성
-
 # voted  1 --> 0, 2 --> 1로 변경 
 trainData_cat <- trainData
 testData_cat  <- testData
@@ -158,12 +175,10 @@ model <- catboost.train(
   params = list(loss_function = 'Logloss',     #- loss function 지정(여기서는 분류모형이므로 Logloss)
                 random_seed   = 123,           #- seed number
                 custom_loss   = "AUC",         #- 모델링 할 때 추가로 추출할 값들 (train_dir로 지정한 곳으로 해당 결과를 파일로 내보내준다)
-                train_dir     = "./model/CatBoost_R_output", #- 모델링 한 결과를 저장할 directory
+                # train_dir     = "./model/CatBoost_R_output", #- 모델링 한 결과를 저장할 directory
                 iterations    = 1000,                         #- 학습 iteration 수
                 metric_period = 10)
 )         
-
-save(model, file = "catboost_version24.RData")
 
 # catboost importance 
 catboost_imp           <- data.frame(model$feature_importances)

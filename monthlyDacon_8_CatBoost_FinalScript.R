@@ -74,12 +74,19 @@ test$tp_var        <- test %>% dplyr::select(c(tpPs, tpNg)) %>% transmute(test =
 train$tp_mean <- train %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (6 - tp02) + (6 - tp04) + (6 - tp06) + (6 - tp08) + (6 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
 test$tp_mean  <- test %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (6 - tp02) + (6 - tp04) + (6 - tp06) + (6 - tp08) + (6 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
 
+#- 4. QE derived Var
+#- 4.1 QE_median
+QE_var          <- train %>% select(matches("Q.E")) %>%  colnames
+train$QE_median <- apply(train[, QE_var], 1,  median)
+test$QE_median  <- apply(test[, QE_var], 1,   median)
+
+#- 4.2 QE_median
+train$QE_min <- apply(train[, QE_var], 1,  min)
+test$QE_min  <- apply(test[, QE_var], 1,   min)
 
 ###############################
 ## 변수타입 설정 & 변수 선택 ##
 ###############################
-#- 수치형 변수 
-num_var <- train %>%  select_if(is.numeric) %>%  colnames 
 
 #- 범주형(명목형) 변환
 factor_var <- c("engnat",
@@ -93,14 +100,14 @@ factor_var <- c("engnat",
                 "urban",
                 "voted")
 
-train[factor_var]        <- train %>% select(all_of(factor_var))        %>% mutate_all(as.factor)
-test[factor_var[c(-10)]]  <-  test %>% select(all_of(factor_var[c(-10)])) %>% mutate_all(as.factor)
+
+Y_idx <- which(factor_var %in% c('voted'))
+train[factor_var]         <- train %>% dplyr::select(all_of(factor_var))        %>% mutate_all(as.factor)
+test[factor_var[-Y_idx]]  <-  test %>% dplyr::select(all_of(factor_var[-Y_idx])) %>% mutate_all(as.factor)
 
 #- 범주형(순서형) 변환
 ordered_var1 <- colnames(train)[grep("Q.A", colnames(train))]
-ordered_var2 <- c("tp01","tp02","tp03","tp04","tp05","tp06","tp07" ,"tp08", "tp09" ,"tp10", 
-                  "wf_01" , "wf_02" , "wf_03", "wr_01", "wr_02", "wr_03",  "wr_04", "wr_05", 
-                  "wr_06" , "wr_07", "wr_08","wr_09", "wr_10",  "wr_11", "wr_12" ,"wr_13") 
+ordered_var2 <- colnames(train)[grep("tp.[0-9]|wr.[0-9]|wf.[0-9]", colnames(train))]
 
 train[c(ordered_var1, ordered_var2)]   <- train %>% select(all_of(ordered_var1), all_of(ordered_var2)) %>% mutate_all(as.ordered)
 test[c(ordered_var1, ordered_var2) ]   <- test %>% select(all_of(ordered_var1), all_of(ordered_var2)) %>% mutate_all(as.ordered)
@@ -120,7 +127,7 @@ trainData <- train[ trainIdx, ]
 testData  <- train[-trainIdx, ]
 
 trainData['voted'] <- ifelse(trainData[,'voted'] == 1, "Yes", "No")
-testData['voted'] <- ifelse(testData[,'voted'] == 1, "Yes", "No")
+testData['voted'] <- ifelse(testData[,'voted']   == 1, "Yes", "No")
 yIdx <- which(colnames(train) %in% 'voted')
 
 ## final 제출시, 적용
