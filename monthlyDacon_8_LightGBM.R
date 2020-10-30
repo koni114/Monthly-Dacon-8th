@@ -39,21 +39,21 @@ machiaVar             <- train %>% select(matches("Q.A")) %>%  colnames
 train$machiaScore     <- train %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
 test$machiaScore      <- test  %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
 
-QAvar <- train %>% select(matches("Q.A")) %>%  colnames
-train$QA_var <- train %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
-test$QA_var  <-  test %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
+# QAvar <- train %>% select(matches("Q.A")) %>%  colnames
+# train$QA_var <- train %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
+# test$QA_var  <-  test %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
 
 #- 3 wf_mean, wr_mean, voca_mean(실제 단어를 아는 경우(wr)  - 허구인 단어를 아는 경우(wf) / 13)
 wfVar <- train %>% select(matches("wf.")) %>%  colnames
 wrVar <- train %>% select(matches("wr.")) %>%  colnames
 
-#- 3.1 wf_mean
-train$wf_mean <- train %>% select(wfVar) %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
-test$wf_mean  <- test %>% select(wfVar)  %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
-
-#- 3.2 wr_mean
-train$wr_mean <- train %>% select(wrVar) %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
-test$wr_mean  <- test %>% select(wrVar)  %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+# #- 3.1 wf_mean
+# train$wf_mean <- train %>% select(wfVar) %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+# test$wf_mean  <- test %>% select(wfVar)  %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+# 
+# #- 3.2 wr_mean
+# train$wr_mean <- train %>% select(wrVar) %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+# test$wr_mean  <- test %>% select(wrVar)  %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
 
 #- 3.3 voca_mean
 train$voca_mean <- train %>% transmute(voca_mean = round((wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03 / 16), 8)) %>% unlist %>% as.numeric
@@ -81,13 +81,13 @@ test$tp_mean  <- test %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 
 
 #- 4. QE derived Var
 #- 4.1 QE_median
-QE_var          <- train %>% select(matches("Q.E")) %>%  colnames
-train$QE_median <- apply(train[, QE_var], 1,  median)
-test$QE_median  <- apply(test[, QE_var], 1,   median)
-
-#- 4.2 QE_median
-train$QE_min <- apply(train[, QE_var], 1,  min)
-test$QE_min  <- apply(test[, QE_var], 1,   min)
+# QE_var          <- train %>% select(matches("Q.E")) %>%  colnames
+# train$QE_median <- apply(train[, QE_var], 1,  median)
+# test$QE_median  <- apply(test[, QE_var], 1,   median)
+# 
+# #- 4.2 QE_median
+# train$QE_min <- apply(train[, QE_var], 1,  min)
+# test$QE_min  <- apply(test[, QE_var], 1,   min)
 
 ##############################
 ## 변수타입설정 & 변수 선택 ##
@@ -107,14 +107,14 @@ factor_var <- c("engnat",
                 "voted")
 
 notEncodingFacVar <- c(
-  "wf_mean", 
-  "wr_mean" 
-  # "voca_mean",
+  # "wf_mean", 
+  # "wr_mean" ,
+  "voca_mean",
   # "machiaScore",
-  # "tp_positive", 
-  # "tp_negative" 
-  # "tp_var",
-  # "tp_mean"
+  "tp_positive",
+  "tp_negative",
+  "tp_var",
+  "tp_mean"
   )
 
 for(i in factor_var){
@@ -188,16 +188,17 @@ categoricals.vec <- categoricals.vec[categoricals.vec %in% finalVar]
 ## 2. 반복량 7000
 ## 3. 나무 깊이 3,4,5,6,7
 ## 4. 부스팅 방법 gbdt, dart
-grid <- data.frame(learningRate = c(0.01, 0.02, 0.02),
-                   maxDepth     = c(6, 7, 6),
-                   booster      = c('gbdt', 'gbdt', 'gbdt'),
-                   iter         = c(811, 341, 346)
+grid <- expand.grid(
+  learningRate = c(0.03, 0.05),
+  maxDepth     = c(8,10,12),
+  booster      = c('gbdt')
 )
 
-# i <- 1
 testResult <- foreach(i = 1:nrow(grid), .combine = function(a,b){ cbind(a, b)})%do% {
   tryCatch({
+    
     g <- grid[1,]
+    print(paste0("i : ", i, ", ", paste(g, collapse = ", ")))
     learningRate <- g$learningRate
     maxDepth     <- g$maxDepth
     booster      <- g$booster
@@ -231,6 +232,7 @@ testResult <- foreach(i = 1:nrow(grid), .combine = function(a,b){ cbind(a, b)})%
       eval_freq             = 20,
       categorical_feature   = categoricals.vec,
       nfold                 = 10,
+      verbose               = 1,
       stratified            = TRUE)
     
     best.iter = lgb.model.cv$best_iter
@@ -242,14 +244,13 @@ testResult <- foreach(i = 1:nrow(grid), .combine = function(a,b){ cbind(a, b)})%
       boosting              = booster,                  #- "gbdt", "rf", "dart" or "goss".
       num_leaves            = 15,                       #- * 트리가 가질수 있는 최대 잎사귀 수
       num_threads           = 2,                        #- * 병렬처리시 처리할 쓰레드
-      nrounds               = 7000,                #- *** 계속 나무를 반복하며 부스팅을 하는데 몇번을 할것인가이다. 1000이상정도는 해주도록 함
-      valids                = valids,
-      early_stopping_rounds = 50,
+      nrounds               = best.iter,                #- *** 계속 나무를 반복하며 부스팅을 하는데 몇번을 할것인가이다. 1000이상정도는 해주도록 함
+      # valids                = valids,
+      # early_stopping_rounds = 50,
       categorical_feature   = categoricals.vec,
       eval_freq             = 50,
       verbose               = 1)
     
-    bestIter  <- lgb_model$best_iter
     tree_imp1  <- lgb.importance(lgb_model, percentage = TRUE)
     tree_imp1$Feature
     finalVar <- tree_imp1$Feature[1:70]
@@ -262,14 +263,16 @@ testResult <- foreach(i = 1:nrow(grid), .combine = function(a,b){ cbind(a, b)})%
       Y    = ifelse(testData$voted == 2, 1, 0))
 
     gridCom       <- paste0(learningRate, "_", maxDepth, "_", booster)
-    tmp           <- data.frame(YHat_lgbm)
+    tmp           <- data.frame(AUC_lgbm)
     colnames(tmp) <- gridCom
     tmp
   }, error = function(err) {return(NULL)})
 }
 
+
+
 YHat_lgbm <- testResult %>% transmute(finalScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
 
 AUC_lgbm  <- mkAUCValue(
-  YHat = YHat_lgbm_final, 
+  YHat = YHat_lgbm, 
   Y    = ifelse(testData$voted == 2, 1, 0))

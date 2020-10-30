@@ -2,6 +2,9 @@ library(DMwR);library(dplyr);library(data.table);library(caret);library(catboost
 setwd("C:/r/Monthly-Dacon-8th/")
 source('C:/r/Monthly-Dacon-8th/monthlyDacon_8_common.R')
 
+finalVarBoolean <- F
+version         <- 25
+
 ##################
 ## Data Loading ##
 ##################
@@ -100,6 +103,16 @@ factor_var <- c("engnat",
                 "urban",
                 "voted")
 
+orderedFacVar <- c(
+  "wf_mean", 
+  "wr_mean" ,
+  "voca_mean",
+  "machiaScore",
+  "tp_positive",
+  "tp_negative",
+  # "tp_var",
+  "tp_mean"
+)
 
 Y_idx <- which(factor_var %in% c('voted'))
 train[factor_var]         <- train %>% dplyr::select(all_of(factor_var))        %>% mutate_all(as.factor)
@@ -109,8 +122,8 @@ test[factor_var[-Y_idx]]  <-  test %>% dplyr::select(all_of(factor_var[-Y_idx]))
 ordered_var1 <- colnames(train)[grep("Q.A", colnames(train))]
 ordered_var2 <- colnames(train)[grep("tp.[0-9]|wr.[0-9]|wf.[0-9]", colnames(train))]
 
-train[c(ordered_var1, ordered_var2)]   <- train %>% select(all_of(ordered_var1), all_of(ordered_var2)) %>% mutate_all(as.ordered)
-test[c(ordered_var1, ordered_var2) ]   <- test %>% select(all_of(ordered_var1), all_of(ordered_var2)) %>% mutate_all(as.ordered)
+train[c(ordered_var1, ordered_var2, orderedFacVar)]   <- train %>% dplyr::select(all_of(ordered_var1), all_of(ordered_var2), all_of(orderedFacVar)) %>% mutate_all(as.ordered)
+test[c(ordered_var1, ordered_var2, orderedFacVar) ]   <- test %>% dplyr::select(all_of(ordered_var1), all_of(ordered_var2), all_of(orderedFacVar)) %>% mutate_all(as.ordered)
 
 #-  변수 제거
 remv_var <- c("index")
@@ -121,21 +134,18 @@ test     <- test  %>%  select(-remv_var)
 ############
 ## 모델링 ##
 ############
-set.seed(1)
-trainIdx <- createDataPartition(train[,"voted"], p = 0.7, list = F)
-trainData <- train[ trainIdx, ]
-testData  <- train[-trainIdx, ]
+#########################
+## 변수 제거 안한 경우 ##
+#########################
+if(finalVarBoolean){
+  trainData <- train[c(finalVar, 'voted')]
+  testData  <- test[c(finalVar)]
+  
+}else{
+  trainData <- train
+  testData  <- test
+}
 
-trainData['voted'] <- ifelse(trainData[,'voted'] == 1, "Yes", "No")
-testData['voted'] <- ifelse(testData[,'voted']   == 1, "Yes", "No")
-yIdx <- which(colnames(train) %in% 'voted')
-
-## final 제출시, 적용
-trainData <- train
-testData  <- test
-
-rm(ls = train)
-rm(ls = test)
 #################
 ## 2. CatBoost ##
 #################
@@ -150,169 +160,36 @@ train_pool <- catboost.load_pool(data = features, label = labels)
 
 # 2. catboost.train 함수를 이용하여 train
 set.seed(1)
-model1 <- catboost.train(
+model <- catboost.train(
   train_pool,                                  #- 학습에 사용하고자 하는 train_pool  
   NULL,                                        #- 
   params = list(loss_function = 'Logloss',     #- loss function 지정(여기서는 분류모형이므로 Logloss)
                 random_seed   = 1,             #- seed number
                 custom_loss   = "AUC",         #- 모델링 할 때 추가로 추출할 값들 (train_dir로 지정한 곳으로 해당 결과를 파일로 내보내준다)
                 train_dir     = "./model/CatBoost_R_output", #- 모델링 한 결과를 저장할 directory
-                iterations    = 2000,                         #- 학습 iteration 수
+                iterations    = 1000,                         #- 학습 iteration 수
                 metric_period = 10)            
 )           
-# save(model1, file = "catBoost_model.RData")
-# load("catBoost_model.RData")
+
+save(model, file = paste0("catBoost_model.RData", version))
 
 # catboost importance 
-catboost_imp           <- data.frame(model1$feature_importances)
-catboost_imp$variables <- rownames(model1$feature_importances)
+catboost_imp           <- data.frame(model$feature_importances)
+catboost_imp$variables <- rownames(model$feature_importances)
 colnames(catboost_imp) <- c("importance", 'variables')
 catboost_imp           <- catboost_imp %>% arrange(-importance)
-View(catboost_imp)
 catboost_imp$variables
 
 # 3. catboost.predict function
 real_pool    <- catboost.load_pool(testData_cat)
-YHat_cat_1   <- catboost.predict(
-  model1, 
+YHat_cat     <- catboost.predict(
+  model, 
   real_pool,
   prediction_type = c('Probability'))  # Probability, Class
-
-
-set.seed(123)
-model2 <- catboost.train(
-  train_pool,                                  #- 학습에 사용하고자 하는 train_pool  
-  NULL,                                        #- 
-  params = list(loss_function = 'Logloss',     #- loss function 지정(여기서는 분류모형이므로 Logloss)
-                random_seed   = 123,           #- seed number
-                custom_loss   = "AUC",         #- 모델링 할 때 추가로 추출할 값들 (train_dir로 지정한 곳으로 해당 결과를 파일로 내보내준다)
-                train_dir     = "./model/CatBoost_R_output", #- 모델링 한 결과를 저장할 directory
-                iterations    = 1000,                         #- 학습 iteration 수
-                metric_period = 10)            
-)           
-
-catboost_imp           <- data.frame(model2$feature_importances)
-catboost_imp$variables <- rownames(model2$feature_importances)
-colnames(catboost_imp) <- c("importance", 'variables')
-catboost_imp           <- catboost_imp %>% arrange(-importance)
-View(catboost_imp)
-catboost_imp$variables
-
-real_pool    <- catboost.load_pool(testData_cat)
-YHat_cat_2   <- catboost.predict(
-  model2, 
-  real_pool,
-  prediction_type = c('Probability'))  # Probability, Class
-
-set.seed(2020)
-model3 <- catboost.train(
-  train_pool,                                  #- 학습에 사용하고자 하는 train_pool  
-  NULL,                                        #- 
-  params = list(loss_function = 'Logloss',     #- loss function 지정(여기서는 분류모형이므로 Logloss)
-                random_seed   = 2020,           #- seed number
-                custom_loss   = "AUC",         #- 모델링 할 때 추가로 추출할 값들 (train_dir로 지정한 곳으로 해당 결과를 파일로 내보내준다)
-                train_dir     = "./model/CatBoost_R_output", #- 모델링 한 결과를 저장할 directory
-                iterations    = 1000,                         #- 학습 iteration 수
-                metric_period = 10)            
-)           
-
-catboost_imp           <- data.frame(model3$feature_importances)
-catboost_imp$variables <- rownames(model3$feature_importances)
-colnames(catboost_imp) <- c("importance", 'variables')
-catboost_imp           <- catboost_imp %>% arrange(-importance)
-View(catboost_imp)
-catboost_imp$variables
-
-real_pool    <- catboost.load_pool(testData_cat)
-YHat_cat_3   <- catboost.predict(
-  model3, 
-  real_pool,
-  prediction_type = c('Probability'))  # Probability, Class
-
-AUC_catboost_1 <- mkAUCValue(
-  YHat = YHat_cat_1, 
-  Y    = ifelse(testData$voted == 2, 1, 0))
-
-AUC_catboost_2 <- mkAUCValue(
-  YHat = YHat_cat_2, 
-  Y    = ifelse(testData$voted == 2, 1, 0))
-
-AUC_catboost_3 <- mkAUCValue(
-  YHat = YHat_cat_3, 
-  Y    = ifelse(testData$voted == 2, 1, 0))
-
-AUC_catboost <- mkAUCValue(
-  YHat = (YHat_cat_1 + YHat_cat_2 + YHat_cat_3) / 3, 
-  Y    = ifelse(testData$voted == 2, 1, 0))
-
-
-
-caret::confusionMatrix(
-  factor(YHat_cat),
-  factor(ifelse(testData$voted == 2, 1, 0))
-)
 
 AUC_catboost <- mkAUCValue(
   YHat = YHat_cat, 
   Y    = ifelse(testData$voted == 2, 1, 0))
-
-#- 투표를 했는데,(Yes, 0), 투표를 하지 않았다고 예측한 경우,(No, 1)
-testData_wrongNo  <- testData[!YHat_cat  == ifelse(testData$voted == 2, 1, 0),] %>% filter(voted == 1)  
-save(testData_wrongNo, file = "testData_wrongNo_CatBoost.RData")
-
-#- 투표를 하지 않았는데(No, 1), 투표를 했다고 예측한 경우, (Yes, 0)
-testData_wrongYes <- testData[!YHat_cat  == ifelse(testData$voted == 2, 1, 0),] %>% filter(voted == 2)
-save(testData_wrongYes, file = "testData_wrongYes_CatBoost.RData")
-
-
-
-##############
-## 3. Caret ##
-##############
-fit_control <- caret::trainControl(
-  method          = "cv",
-  search          = 'grid',
-  number          = 10, 
-  verboseIter     = T,
-  savePredictions = TRUE, 
-  classProbs      = T,
-  summaryFunction = prSummary)
-
-grid <- expand.grid(depth = c(4, 6, 8),
-                    learning_rate = c(0.1, 0.3, 0.5, 0.7),
-                    iterations = c(400, 600, 800, 1000, 1200),
-                    l2_leaf_reg = 1e-3,
-                    rsm = 0.95,
-                    border_count = 200)
-
-modelResult <- caret::train(
-  trainData[-yIdx], 
-  trainData[,yIdx],
-  method = catboost.caret,
-  metric = "AUC",
-  logging_level = 'Verbose',
-  preProc       = NULL,
-  tuneGrid      = grid,
-  trControl     = fit_control)
-
-
-modelResult$results  # 튜닝별 모델링 결과
-modelResult$bestTune # 최적 파라미터 결과
-
-Yhat_CatBoost <- predict.train(
-  object = modelResult,
-  newdata = testData, 
-  type = c('prob')   
-)
-
-AUC_CatBoost <- mkAUCValue(
-  YHat = Yhat_CatBoost[, 1], 
-  Y    = ifelse(testData$voted == "No", 1, 0))
-
-
-importance <- varImp(modelResult, scale = FALSE)
-importance$importance
-
 
 
 ####################

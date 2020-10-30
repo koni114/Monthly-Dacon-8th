@@ -123,8 +123,12 @@ test[factor_var[-Y_idx]]  <-  test %>% dplyr::select(all_of(factor_var[-Y_idx]))
 ordered_var1 <- colnames(train)[grep("Q.A", colnames(train))]
 ordered_var2 <- colnames(train)[grep("tp.[0-9]|wr.[0-9]|wf.[0-9]", colnames(train))]
 
-train[c(ordered_var1, ordered_var2, orderedFacVar)]   <- train %>% dplyr::select(all_of(ordered_var1), all_of(ordered_var2), all_of(orderedFacVar)) %>% mutate_all(as.ordered)
-test[c(ordered_var1, ordered_var2, orderedFacVar) ]   <- test %>% dplyr::select(all_of(ordered_var1), all_of(ordered_var2), all_of(orderedFacVar)) %>% mutate_all(as.ordered)
+train[c(ordered_var1, ordered_var2, orderedFacVar)]   <- train %>% dplyr::select(  all_of(ordered_var1)
+                                                                                 , all_of(ordered_var2)
+                                                                                 , all_of(orderedFacVar)) %>% mutate_all(as.ordered)
+test[c(ordered_var1, ordered_var2, orderedFacVar) ]   <- test %>% dplyr::select(  all_of(ordered_var1)
+                                                                                , all_of(ordered_var2)
+                                                                                , all_of(orderedFacVar)) %>% mutate_all(as.ordered)
 
 
 #-  변수 제거
