@@ -284,18 +284,6 @@ final_score : 0.7735234
 ################
 ## 25번 제출 사항 ##
 ################
-- CatBoost 변수 제거 안함.    : 0.772498
-- CatBoost 변수 70개로 짜름 :  0.7722714
-orderedFacVar <- c(
-  "wf_mean", 
-  "wr_mean" ,
-  "voca_mean",
-  "machiaScore",
-  "tp_positive",
-  "tp_negative",
-  # "tp_var",
-  "tp_mean"
-)
 
 
 

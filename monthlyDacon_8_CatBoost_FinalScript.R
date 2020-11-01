@@ -1,10 +1,8 @@
 library(DMwR);library(dplyr);library(data.table);library(caret);library(catboost);library(Matrix);library(ROCR);library(lightgbm)
 setwd("C:/r/Monthly-Dacon-8th/")
 source('C:/r/Monthly-Dacon-8th/monthlyDacon_8_common.R')
-
 finalVarBoolean <- F
-version         <- 25
-
+ver             <- 30
 ##################
 ## Data Loading ##
 ##################
@@ -26,15 +24,18 @@ test  <- data.table::fread(
   data.table = F,
   na.strings = c("NA", "NaN", "NULL", "\\N"))
 
-
-###########################
-## 파생변수 생성 및 변경 ##
-###########################
+# ###########################
+# ## 파생변수 생성 및 변경 ##
+# ###########################
 #- 1. reverse 
 #- QaA, QdA, QeA, QfA, QgA, QiA, QkA, QnA, QqA, QrA --> reverse 
 revVar  <- c("QaA", "QdA", "QeA", "QfA", "QgA", "QiA", "QkA", "QnA", "QqA", "QrA")
 train[revVar] <- train %>% select(revVar) %>% mutate_all(list(~6 - .))
 test[revVar]  <- test %>% select(revVar) %>% mutate_all(list(~6 - .))
+
+QAvar <- train %>% select(matches("Q.A")) %>%  colnames
+# train$QA_var <- train %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
+# test$QA_var  <-  test %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
 
 #- 2. machia score = 전체 점수의 평균 값 계산
 machiaVar             <- train %>% select(matches("Q.A")) %>%  colnames
@@ -46,36 +47,36 @@ wfVar <- train %>% select(matches("wf.")) %>%  colnames
 wrVar <- train %>% select(matches("wr.")) %>%  colnames
 
 #- 3.1 wf_mean
-train$wf_mean <- train %>% select(wfVar) %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
-test$wf_mean  <- test %>% select(wfVar)  %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+# train$wf_mean <- train %>% select(wfVar) %>% transmute(wf_mean = round(rowSums(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+# test$wf_mean  <- test %>% select(wfVar)  %>% transmute(wf_mean = round(rowSums(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
 
 #- 3.2 wr_mean
-train$wr_mean <- train %>% select(wrVar) %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
-test$wr_mean  <- test %>% select(wrVar)  %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+# train$wr_mean <- train %>% select(wrVar) %>% transmute(wr_mean = round(rowSums(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+# test$wr_mean  <- test %>% select(wrVar)  %>% transmute(wr_mean = round(rowSums(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
 
 #- 3.3 voca_mean
-train$voca_mean <- train %>% transmute(voca_mean = round((wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03 / 16), 8)) %>% unlist %>% as.numeric
-test$voca_mean <- test %>% transmute(voca_mean = round((wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03 / 16), 8)) %>% unlist %>% as.numeric
+train$voca_mean <- train %>% transmute(voca_mean = (wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03)) %>% unlist %>% as.numeric
+test$voca_mean <- test %>% transmute(voca_mean = (wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03)) %>% unlist %>% as.numeric
 
 #- tp variable
 tpPs <- c("tp01", "tp03", "tp05", "tp07", "tp09")
 tpNg <- c("tp02", "tp04", "tp06", "tp08", "tp10")
 
 #- 3.4 tp_positive
-train$tp_positive  <- train %>% select(tpPs) %>% transmute(tp_positive = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
-test$tp_positive   <- test  %>% select(tpPs) %>% transmute(tp_positive = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
+train$tp_positive  <- train %>% select(all_of(tpPs)) %>% transmute(tp_positive = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
+test$tp_positive   <- test  %>% dplyr::select(all_of(tpPs)) %>% transmute(tp_positive = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
 
 #- 3.5 tp_negative 
-train$tp_negative  <- train %>% select(tpNg) %>% transmute(tp_negative = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
-test$tp_negative   <- test  %>% select(tpNg) %>% transmute(tp_negative = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
+train$tp_negative  <- train %>% dplyr::select(all_of(tpNg)) %>% transmute(tp_negative = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
+test$tp_negative   <- test  %>% dplyr::select(all_of(tpNg)) %>% transmute(tp_negative = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
 
 #- 3.6 tp_variance
 train$tp_var       <- train %>% dplyr::select(c(tpPs, tpNg)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric 
 test$tp_var        <- test %>% dplyr::select(c(tpPs, tpNg)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric 
 
 #- 3.7 tp_mean
-train$tp_mean <- train %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (6 - tp02) + (6 - tp04) + (6 - tp06) + (6 - tp08) + (6 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
-test$tp_mean  <- test %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (6 - tp02) + (6 - tp04) + (6 - tp06) + (6 - tp08) + (6 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
+train$tp_mean <- train %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (7 - tp02) + (7 - tp04) + (7 - tp06) + (7 - tp08) + (7 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
+test$tp_mean  <- test %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (7 - tp02) + (7 - tp04) + (7 - tp06) + (7 - tp08) + (7 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
 
 #- 4. QE derived Var
 #- 4.1 QE_median
@@ -83,7 +84,7 @@ QE_var          <- train %>% select(matches("Q.E")) %>%  colnames
 train$QE_median <- apply(train[, QE_var], 1,  median)
 test$QE_median  <- apply(test[, QE_var], 1,   median)
 
-#- 4.2 QE_median
+# #- 4.2 QE_median
 train$QE_min <- apply(train[, QE_var], 1,  min)
 test$QE_min  <- apply(test[, QE_var], 1,   min)
 
@@ -104,13 +105,13 @@ factor_var <- c("engnat",
                 "voted")
 
 orderedFacVar <- c(
-  "wf_mean", 
-  "wr_mean" ,
+  # "wf_mean", 
+  # "wr_mean" ,
   "voca_mean",
-  "machiaScore",
+  # "machiaScore",
   "tp_positive",
   "tp_negative",
-  # "tp_var",
+  "tp_var",
   "tp_mean"
 )
 
@@ -122,14 +123,18 @@ test[factor_var[-Y_idx]]  <-  test %>% dplyr::select(all_of(factor_var[-Y_idx]))
 ordered_var1 <- colnames(train)[grep("Q.A", colnames(train))]
 ordered_var2 <- colnames(train)[grep("tp.[0-9]|wr.[0-9]|wf.[0-9]", colnames(train))]
 
-train[c(ordered_var1, ordered_var2, orderedFacVar)]   <- train %>% dplyr::select(all_of(ordered_var1), all_of(ordered_var2), all_of(orderedFacVar)) %>% mutate_all(as.ordered)
-test[c(ordered_var1, ordered_var2, orderedFacVar) ]   <- test %>% dplyr::select(all_of(ordered_var1), all_of(ordered_var2), all_of(orderedFacVar)) %>% mutate_all(as.ordered)
+train[c(ordered_var1, ordered_var2, orderedFacVar)]   <- train %>% dplyr::select(  all_of(ordered_var1)
+                                                                                   , all_of(ordered_var2)
+                                                                                   , all_of(orderedFacVar)) %>% mutate_all(as.ordered)
+test[c(ordered_var1, ordered_var2, orderedFacVar) ]   <- test %>% dplyr::select(  all_of(ordered_var1)
+                                                                                  , all_of(ordered_var2)
+                                                                                  , all_of(orderedFacVar)) %>% mutate_all(as.ordered)
+
 
 #-  변수 제거
 remv_var <- c("index")
-train    <- train %>%  select(-remv_var)
-test     <- test  %>%  select(-remv_var)
-
+train    <- train %>%  dplyr::select(-all_of(remv_var))
+test     <- test  %>%  dplyr::select(-all_of(remv_var))
 
 ############
 ## 모델링 ##
@@ -171,7 +176,6 @@ model <- catboost.train(
                 metric_period = 10)            
 )           
 
-save(model, file = paste0("catBoost_model.RData", version))
 
 # catboost importance 
 catboost_imp           <- data.frame(model$feature_importances)
@@ -179,6 +183,14 @@ catboost_imp$variables <- rownames(model$feature_importances)
 colnames(catboost_imp) <- c("importance", 'variables')
 catboost_imp           <- catboost_imp %>% arrange(-importance)
 catboost_imp$variables
+
+finalVar <- catboost_imp$variables[1:70]
+
+######################
+## 변수 & 모델 저장 ##
+######################
+save(model, file = paste0("catBoost_model_", ver,".RData"))
+save(finalVar, file = paste0("catBoost_finalVar_", ver,".RData"))
 
 # 3. catboost.predict function
 real_pool    <- catboost.load_pool(testData_cat)

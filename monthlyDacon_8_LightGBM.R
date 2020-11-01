@@ -47,17 +47,17 @@ test$machiaScore      <- test  %>% select(machiaVar) %>% transmute(machiaScore =
 wfVar <- train %>% select(matches("wf.")) %>%  colnames
 wrVar <- train %>% select(matches("wr.")) %>%  colnames
 
-# #- 3.1 wf_mean
+#- 3.1 wf_mean
 # train$wf_mean <- train %>% select(wfVar) %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
 # test$wf_mean  <- test %>% select(wfVar)  %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
-# 
-# #- 3.2 wr_mean
+
+#- 3.2 wr_mean
 # train$wr_mean <- train %>% select(wrVar) %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
 # test$wr_mean  <- test %>% select(wrVar)  %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
 
 #- 3.3 voca_mean
-train$voca_mean <- train %>% transmute(voca_mean = round((wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03 / 16), 8)) %>% unlist %>% as.numeric
-test$voca_mean <- test %>% transmute(voca_mean = round((wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03 / 16), 8)) %>% unlist %>% as.numeric
+train$voca_mean <- train %>% transmute(voca_mean = (wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03)) %>% unlist %>% as.numeric
+test$voca_mean <- test %>% transmute(voca_mean = (wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03)) %>% unlist %>% as.numeric
 
 #- tp variable
 tpPs <- c("tp01", "tp03", "tp05", "tp07", "tp09")
@@ -81,19 +81,18 @@ test$tp_mean  <- test %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 
 
 #- 4. QE derived Var
 #- 4.1 QE_median
-# QE_var          <- train %>% select(matches("Q.E")) %>%  colnames
-# train$QE_median <- apply(train[, QE_var], 1,  median)
-# test$QE_median  <- apply(test[, QE_var], 1,   median)
+QE_var          <- train %>% select(matches("Q.E")) %>%  colnames
+train$QE_median <- apply(train[, QE_var], 1,  median)
+test$QE_median  <- apply(test[, QE_var], 1,   median)
 # 
 # #- 4.2 QE_median
-# train$QE_min <- apply(train[, QE_var], 1,  min)
-# test$QE_min  <- apply(test[, QE_var], 1,   min)
+train$QE_min <- apply(train[, QE_var], 1,  min)
+test$QE_min  <- apply(test[, QE_var], 1,   min)
 
 ##############################
 ## 변수타입설정 & 변수 선택 ##
 ##############################
 #- 수치형 변수 
-
 #- 범주형(명목형) 변환
 factor_var <- c("engnat",
                 "age_group",
@@ -107,9 +106,9 @@ factor_var <- c("engnat",
                 "voted")
 
 notEncodingFacVar <- c(
-  # "wf_mean", 
+  # "wf_mean",
   # "wr_mean" ,
-  "voca_mean",
+  # "voca_mean",
   # "machiaScore",
   "tp_positive",
   "tp_negative",
@@ -165,7 +164,7 @@ categoricals.vec <- c(factor_var[-Y_idx], ordered_var1, ordered_var2, notEncodin
 #######################
 ## 변수 제거 한 경우 ##
 #######################
-set.seed(100)
+set.seed(1)
 trainIdx <- createDataPartition(train[,"voted"], p = 0.7, list = F)
 trainData <- train[ trainIdx, c(finalVar, 'voted')]
 testData  <- train[-trainIdx, c(finalVar, 'voted')]
@@ -180,7 +179,7 @@ train.lgb        <- lgb.Dataset(data  = train_sparse, label = ifelse(y_train == 
 test.lgb         <- lgb.Dataset.create.valid(train.lgb, data = test_sparse, label = ifelse(testData[c('voted')] == 2, 1, 0))
 valids           <- list(train = train.lgb, test = test.lgb)
 
-categoricals.vec <- c(factor_var[-Y_idx], ordered_var1, ordered_var2)
+categoricals.vec <- c(factor_var[-Y_idx], ordered_var1, ordered_var2, notEncodingFacVar)
 categoricals.vec <- categoricals.vec[categoricals.vec %in% finalVar]
 
 ## grid search
@@ -189,15 +188,15 @@ categoricals.vec <- categoricals.vec[categoricals.vec %in% finalVar]
 ## 3. 나무 깊이 3,4,5,6,7
 ## 4. 부스팅 방법 gbdt, dart
 grid <- expand.grid(
-  learningRate = c(0.03, 0.05),
-  maxDepth     = c(8,10,12),
+  learningRate = c(0.02, 0.04, 0.06),
+  maxDepth     = c(7),
   booster      = c('gbdt')
 )
 
 testResult <- foreach(i = 1:nrow(grid), .combine = function(a,b){ cbind(a, b)})%do% {
   tryCatch({
     
-    g <- grid[1,]
+    g <- grid[i, ]
     print(paste0("i : ", i, ", ", paste(g, collapse = ", ")))
     learningRate <- g$learningRate
     maxDepth     <- g$maxDepth
@@ -209,7 +208,6 @@ testResult <- foreach(i = 1:nrow(grid), .combine = function(a,b){ cbind(a, b)})%
                     feature_fraction = 0.7,
                     bagging_fraction = 0.7,
                     bagging_freq = 5,
-                    max_depth    = maxDepth,
                     #min_data = 100,
                     #max_bin = 50,
                     lambda_l1 = 8,
@@ -234,6 +232,7 @@ testResult <- foreach(i = 1:nrow(grid), .combine = function(a,b){ cbind(a, b)})%
       nfold                 = 10,
       verbose               = 1,
       stratified            = TRUE)
+    
     
     best.iter = lgb.model.cv$best_iter
     
@@ -262,14 +261,12 @@ testResult <- foreach(i = 1:nrow(grid), .combine = function(a,b){ cbind(a, b)})%
       YHat = YHat_lgbm,
       Y    = ifelse(testData$voted == 2, 1, 0))
 
-    gridCom       <- paste0(learningRate, "_", maxDepth, "_", booster)
-    tmp           <- data.frame(AUC_lgbm)
+    gridCom       <- paste0(learningRate, "_", maxDepth, "_", booster, "_", best.iter)
+    tmp           <- data.frame(YHat_lgbm)
     colnames(tmp) <- gridCom
     tmp
   }, error = function(err) {return(NULL)})
 }
-
-
 
 YHat_lgbm <- testResult %>% transmute(finalScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
 

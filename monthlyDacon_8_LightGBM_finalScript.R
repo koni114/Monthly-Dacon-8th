@@ -1,5 +1,5 @@
 library(DMwR);library(dplyr);library(data.table);library(caret);library(catboost);
-library(Matrix);library(ROCR);library(lightgbm);library(CatEncoders);library(foreach)
+library(Matrix);library(ROCR);library(lightgbm);library(CatEncoders);library(foreach);library(matrixStats)
 setwd("C:/r/Monthly-Dacon-8th/")
 source('C:/r/Monthly-Dacon-8th/monthlyDacon_8_common.R')
 
@@ -24,7 +24,7 @@ test  <- data.table::fread(
   data.table = F,
   na.strings = c("NA", "NaN", "NULL", "\\N"))
 
-  
+
 ###########################
 ## 파생변수 생성 및 변경 ##
 ###########################
@@ -39,25 +39,25 @@ machiaVar             <- train %>% select(matches("Q.A")) %>%  colnames
 train$machiaScore     <- train %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
 test$machiaScore      <- test  %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
 
-QAvar <- train %>% select(matches("Q.A")) %>%  colnames
-train$QA_var <- train %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
-test$QA_var  <-  test %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
+# QAvar <- train %>% select(matches("Q.A")) %>%  colnames
+# train$QA_var <- train %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
+# test$QA_var  <-  test %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
 
 #- 3 wf_mean, wr_mean, voca_mean(실제 단어를 아는 경우(wr)  - 허구인 단어를 아는 경우(wf) / 13)
 wfVar <- train %>% select(matches("wf.")) %>%  colnames
 wrVar <- train %>% select(matches("wr.")) %>%  colnames
 
 #- 3.1 wf_mean
-train$wf_mean <- train %>% select(wfVar) %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
-test$wf_mean  <- test %>% select(wfVar)  %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+# train$wf_mean <- train %>% select(wfVar) %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+# test$wf_mean  <- test %>% select(wfVar)  %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
 
 #- 3.2 wr_mean
-train$wr_mean <- train %>% select(wrVar) %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
-test$wr_mean  <- test %>% select(wrVar)  %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+# train$wr_mean <- train %>% select(wrVar) %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+# test$wr_mean  <- test %>% select(wrVar)  %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
 
 #- 3.3 voca_mean
-train$voca_mean <- train %>% transmute(voca_mean = round((wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03 / 16), 8)) %>% unlist %>% as.numeric
-test$voca_mean <- test %>% transmute(voca_mean = round((wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03 / 16), 8)) %>% unlist %>% as.numeric
+train$voca_mean <- train %>% transmute(voca_mean = (wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03)) %>% unlist %>% as.numeric
+test$voca_mean <- test %>% transmute(voca_mean = (wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03)) %>% unlist %>% as.numeric
 
 #- tp variable
 tpPs <- c("tp01", "tp03", "tp05", "tp07", "tp09")
@@ -79,11 +79,20 @@ test$tp_var        <- test %>% dplyr::select(c(tpPs, tpNg)) %>% transmute(test =
 train$tp_mean <- train %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (7 - tp02) + (7 - tp04) + (7 - tp06) + (7 - tp08) + (7 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
 test$tp_mean  <- test %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (7 - tp02) + (7 - tp04) + (7 - tp06) + (7 - tp08) + (7 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
 
+#- 4. QE derived Var
+#- 4.1 QE_median
+QE_var          <- train %>% select(matches("Q.E")) %>%  colnames
+train$QE_median <- apply(train[, QE_var], 1,  median)
+test$QE_median  <- apply(test[, QE_var], 1,   median)
+# 
+# #- 4.2 QE_median
+train$QE_min <- apply(train[, QE_var], 1,  min)
+test$QE_min  <- apply(test[, QE_var], 1,   min)
+
 ##############################
 ## 변수타입설정 & 변수 선택 ##
 ##############################
 #- 수치형 변수 
-
 #- 범주형(명목형) 변환
 factor_var <- c("engnat",
                 "age_group",
@@ -94,14 +103,18 @@ factor_var <- c("engnat",
                 "race",
                 "religion",
                 "urban",
-                "machiaScore",
-                "wf_mean",
-                "wr_mean",
-                "voca_mean",
-                "tp_positive",
-                "tp_negative",
-                "tp_mean",
                 "voted")
+
+notEncodingFacVar <- c(
+  # "wf_mean",
+  # "wr_mean" ,
+  # "voca_mean",
+  # "machiaScore",
+  "tp_positive",
+  "tp_negative",
+  "tp_var",
+  "tp_mean"
+)
 
 for(i in factor_var){
   encode      <- CatEncoders::LabelEncoder.fit( train[,i])
@@ -113,8 +126,10 @@ for(i in factor_var){
   }
 }
 
+Y_idx <- which(factor_var %in% c('voted'))
+
 train[factor_var]         <- train %>% dplyr::select(all_of(factor_var))        %>% mutate_all(as.factor)
-test[factor_var[c(-17)]]  <-  test %>% dplyr::select(all_of(factor_var[c(-17)])) %>% mutate_all(as.factor)
+test[factor_var[-Y_idx]]  <-  test %>% dplyr::select(all_of(factor_var[-Y_idx])) %>% mutate_all(as.factor)
 
 ordered_var1 <- colnames(train)[grep("Q.A", colnames(train))]
 ordered_var2 <- colnames(train)[grep("tp.[0-9]|wr.[0-9]|wf.[0-9]", colnames(train))]
@@ -127,16 +142,13 @@ test     <- test  %>%  dplyr::select(-all_of(remv_var))
 ############
 ## 모델링 ##
 ############
+#########################
+## 변수 제거 안한 경우 ##
+#########################
 set.seed(1)
 trainData <- train
 testData  <- test
 
-rm(ls = train)
-rm(ls = test)
-
-#################
-## 5. LightGBM ##
-#################
 varnames     = setdiff(colnames(trainData), c("voted"))
 train_sparse = Matrix(as.matrix(trainData[, varnames]), sparse=TRUE)
 test_sparse  = Matrix(as.matrix(testData[,  varnames]), sparse=TRUE)
@@ -144,29 +156,36 @@ y_train      = trainData[, c("voted")]
 
 # binary, auc 계산시, 반드시 Y 값은 0 또는 1이어야 함
 train.lgb        <- lgb.Dataset(data  = train_sparse, label = ifelse(y_train == 2, 1, 0))
-test.lgb         <- lgb.Dataset.create.valid(train.lgb, data = test_sparse, label = ifelse(testData[c('voted')] == 2, 1, 0))
-valids           <- list(train = train.lgb, test = test.lgb)
+categoricals.vec <- c(factor_var[-Y_idx], ordered_var1, ordered_var2, notEncodingFacVar)
 
-categoricals.vec <- c(factor_var[-10], ordered_var1, ordered_var2)
-categoricals.vec <- categoricals.vec[!categoricals.vec %in% c('tp_var')]
-# categoricals.vec <- categoricals.vec[categoricals.vec %in% finalVar]
+#######################
+## 변수 제거 한 경우 ##
+#######################
+set.seed(1)
+trainData <- train[c(finalVar, 'voted')]
+testData  <- test[c(finalVar)]
+
+varnames     = setdiff(colnames(trainData), c("voted"))
+train_sparse = Matrix(as.matrix(trainData[, varnames]), sparse=TRUE)
+test_sparse  = Matrix(as.matrix(testData[,  varnames]), sparse=TRUE)
+y_train      = trainData[, c("voted")]
+
+# binary, auc 계산시, 반드시 Y 값은 0 또는 1이어야 함
+train.lgb        <- lgb.Dataset(data  = train_sparse, label = ifelse(y_train == 2, 1, 0))
+categoricals.vec <- c(factor_var[-Y_idx], ordered_var1, ordered_var2, notEncodingFacVar)
+categoricals.vec <- categoricals.vec[categoricals.vec %in% finalVar]
 
 ## grid search
 ## 1. 훈련량 0.01, 0.02 0.05, 0.07, 0.1
 ## 2. 반복량 7000
 ## 3. 나무 깊이 3,4,5,6,7
 ## 4. 부스팅 방법 gbdt, dart
-# grid <- expand.grid(
-#   learningRate = c(0.01, 0.02, 0.05, 0.07, 0.1),
-#   maxDepth     = c(3, 4, 5, 6, 7),
-#   booster      = c('gbdt','dart')
-# )
-
-grid <- data.frame(learningRate = c(0.01, 0.02, 0.02),
-                   maxDepth     = c(6, 7, 6),
-                   booster      = c('gbdt', 'gbdt', 'gbdt'),
-                   iter         = c(811, 341, 346)
-                   )
+grid <- expand.grid(
+  learningRate = c(0.02, 0.04, 0.06),
+  maxDepth     = c(7),
+  booster      = c('gbdt'),
+  iter         = c(310, 129, 106)
+)
 
 # i <- 1
 testResult <- foreach(i = 1:nrow(grid), .combine = function(a,b){ cbind(a, b)})%do% {
@@ -207,10 +226,6 @@ testResult <- foreach(i = 1:nrow(grid), .combine = function(a,b){ cbind(a, b)})%
       categorical_feature   = categoricals.vec,
       eval_freq             = 50,
       verbose               = 1)
-    
-    
-    bestScore <- lgb_model$best_score
-    bestIter  <- lgb_model$best_iter
     
     #- Create and Submit Predictions
     YHat_lgbm <- predict(lgb_model, test_sparse)

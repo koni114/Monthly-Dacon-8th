@@ -34,8 +34,8 @@ train[revVar] <- train %>% select(revVar) %>% mutate_all(list(~6 - .))
 test[revVar]  <- test %>% select(revVar) %>% mutate_all(list(~6 - .))
 
 QAvar <- train %>% select(matches("Q.A")) %>%  colnames
-train$QA_var <- train %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
-test$QA_var  <-  test %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
+# train$QA_var <- train %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
+# test$QA_var  <-  test %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
   
 #- 2. machia score = 전체 점수의 평균 값 계산
 machiaVar             <- train %>% select(matches("Q.A")) %>%  colnames
@@ -47,16 +47,16 @@ wfVar <- train %>% select(matches("wf.")) %>%  colnames
 wrVar <- train %>% select(matches("wr.")) %>%  colnames
 
 #- 3.1 wf_mean
-train$wf_mean <- train %>% select(wfVar) %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
-test$wf_mean  <- test %>% select(wfVar)  %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+# train$wf_mean <- train %>% select(wfVar) %>% transmute(wf_mean = round(rowSums(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+# test$wf_mean  <- test %>% select(wfVar)  %>% transmute(wf_mean = round(rowSums(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
 
 #- 3.2 wr_mean
-train$wr_mean <- train %>% select(wrVar) %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
-test$wr_mean  <- test %>% select(wrVar)  %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+# train$wr_mean <- train %>% select(wrVar) %>% transmute(wr_mean = round(rowSums(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+# test$wr_mean  <- test %>% select(wrVar)  %>% transmute(wr_mean = round(rowSums(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
 
 #- 3.3 voca_mean
-train$voca_mean <- train %>% transmute(voca_mean = round((wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03 / 16), 8)) %>% unlist %>% as.numeric
-test$voca_mean <- test %>% transmute(voca_mean = round((wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03 / 16), 8)) %>% unlist %>% as.numeric
+train$voca_mean <- train %>% transmute(voca_mean = (wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03)) %>% unlist %>% as.numeric
+test$voca_mean <- test %>% transmute(voca_mean = (wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03)) %>% unlist %>% as.numeric
 
 #- tp variable
 tpPs <- c("tp01", "tp03", "tp05", "tp07", "tp09")
@@ -105,13 +105,13 @@ factor_var <- c("engnat",
                 "voted")
 
 orderedFacVar <- c(
-  "wf_mean", 
-  "wr_mean" ,
+  # "wf_mean", 
+  # "wr_mean" ,
   "voca_mean",
-  "machiaScore",
+  # "machiaScore",
   "tp_positive",
   "tp_negative",
-  # "tp_var",
+  "tp_var",
   "tp_mean"
 )
 
@@ -148,15 +148,15 @@ if(finalVarBoolean){
   trainData <- train[ trainIdx, c(finalVar, "voted")]
   testData  <- train[-trainIdx, c(finalVar, "voted")]
 }else{
+#######################
+## 변수 제거 한 경우 ##
+#######################
   set.seed(1)
-  trainIdx <- createDataPartition(train[,"voted"], p = 0.7, list = F)
+  trainIdx  <- createDataPartition(train[,"voted"], p = 0.7, list = F)
   trainData <- train[ trainIdx, ]
   testData  <- train[-trainIdx, ]
 }
 
-#######################
-## 변수 제거 한 경우 ##
-#######################
 
 #################
 ## 2. CatBoost ##
