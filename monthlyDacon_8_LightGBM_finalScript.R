@@ -230,9 +230,9 @@ testResult <- foreach(i = 1:nrow(grid), .combine = function(a,b){ cbind(a, b)})%
     #- Create and Submit Predictions
     YHat_lgbm <- predict(lgb_model, test_sparse)
     
-    # AUC_lgbm  <- mkAUCValue(
-    #   YHat = YHat_lgbm,
-    #   Y    = ifelse(testData$voted == 2, 1, 0))
+    tree_imp1  <- lgb.importance(lgb_model, percentage = TRUE)
+    tree_imp1$Feature
+    finalVar <- tree_imp1$Feature[1:70]
 
     gridCom       <- paste0(learningRate, "_", maxDepth, "_", booster)
     tmp           <- data.frame(YHat_lgbm)
@@ -242,7 +242,3 @@ testResult <- foreach(i = 1:nrow(grid), .combine = function(a,b){ cbind(a, b)})%
 }
 
 YHat_lgbm <- testResult %>% transmute(finalScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
-
-AUC_lgbm  <- mkAUCValue(
-  YHat = YHat_lgbm_final, 
-  Y    = ifelse(testData$voted == 2, 1, 0))

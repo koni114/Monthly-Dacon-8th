@@ -130,7 +130,6 @@ test[c(ordered_var1, ordered_var2, orderedFacVar) ]   <- test %>% dplyr::select(
                                                                                   , all_of(ordered_var2)
                                                                                   , all_of(orderedFacVar)) %>% mutate_all(as.ordered)
 
-
 #-  변수 제거
 remv_var <- c("index")
 train    <- train %>%  dplyr::select(-all_of(remv_var))
@@ -199,10 +198,6 @@ YHat_cat     <- catboost.predict(
   real_pool,
   prediction_type = c('Probability'))  # Probability, Class
 
-AUC_catboost <- mkAUCValue(
-  YHat = YHat_cat, 
-  Y    = ifelse(testData$voted == 2, 1, 0))
-
 
 ####################
 ## final assemble ##
@@ -211,5 +206,5 @@ AUC_final <- mkAUCValue(
   YHat = (YHat_cat_1 + YHat_cat_2 + YHat_cat_3) / 3, 
   Y    = ifelse(testData$voted == 2, 1, 0))
 
-sample_submission$voted <- (YHat_cat_1 + YHat_cat_2 + YHat_cat_3) / 3
+sample_submission$voted <- (YHat_cat * 0.6) +  (YHat_lgbm * 0.4)
 write.csv(sample_submission, "submission_data.csv", row.names = F)
