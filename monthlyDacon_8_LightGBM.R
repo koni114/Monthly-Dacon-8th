@@ -39,21 +39,21 @@ machiaVar             <- train %>% select(matches("Q.A")) %>%  colnames
 train$machiaScore     <- train %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
 test$machiaScore      <- test  %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
 
-# QAvar <- train %>% select(matches("Q.A")) %>%  colnames
-# train$QA_var <- train %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
-# test$QA_var  <-  test %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
+QAvar <- train %>% select(matches("Q.A")) %>%  colnames
+train$QA_var <- train %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
+test$QA_var  <-  test %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
 
 #- 3 wf_mean, wr_mean, voca_mean(실제 단어를 아는 경우(wr)  - 허구인 단어를 아는 경우(wf) / 13)
 wfVar <- train %>% select(matches("wf.")) %>%  colnames
 wrVar <- train %>% select(matches("wr.")) %>%  colnames
 
 #- 3.1 wf_mean
-# train$wf_mean <- train %>% select(wfVar) %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
-# test$wf_mean  <- test %>% select(wfVar)  %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+train$wf_mean <- train %>% select(wfVar) %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+test$wf_mean  <- test %>% select(wfVar)  %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
 
 #- 3.2 wr_mean
-# train$wr_mean <- train %>% select(wrVar) %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
-# test$wr_mean  <- test %>% select(wrVar)  %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+train$wr_mean <- train %>% select(wrVar) %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+test$wr_mean  <- test %>% select(wrVar)  %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
 
 #- 3.3 voca_mean
 train$voca_mean <- train %>% transmute(voca_mean = (wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03)) %>% unlist %>% as.numeric
@@ -79,16 +79,6 @@ test$tp_var        <- test %>% dplyr::select(c(tpPs, tpNg)) %>% transmute(test =
 train$tp_mean <- train %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (7 - tp02) + (7 - tp04) + (7 - tp06) + (7 - tp08) + (7 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
 test$tp_mean  <- test %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (7 - tp02) + (7 - tp04) + (7 - tp06) + (7 - tp08) + (7 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
 
-#- 4. QE derived Var
-#- 4.1 QE_median
-QE_var          <- train %>% select(matches("Q.E")) %>%  colnames
-train$QE_median <- apply(train[, QE_var], 1,  median)
-test$QE_median  <- apply(test[, QE_var], 1,   median)
-# 
-# #- 4.2 QE_median
-train$QE_min <- apply(train[, QE_var], 1,  min)
-test$QE_min  <- apply(test[, QE_var], 1,   min)
-
 ##############################
 ## 변수타입설정 & 변수 선택 ##
 ##############################
@@ -106,10 +96,11 @@ factor_var <- c("engnat",
                 "voted")
 
 notEncodingFacVar <- c(
-  # "wf_mean",
-  # "wr_mean" ,
-  # "voca_mean",
-  # "machiaScore",
+  "wf_mean",
+  "wr_mean" ,
+  "voca_mean",
+  "familysize", 
+  "machiaScore",
   "tp_positive",
   "tp_negative",
   "tp_var",
@@ -187,12 +178,12 @@ categoricals.vec <- categoricals.vec[categoricals.vec %in% finalVar]
 ## 2. 반복량 7000
 ## 3. 나무 깊이 3,4,5,6,7
 ## 4. 부스팅 방법 gbdt, dart
-grid <- expand.grid(
+grid <- data.frame(
   learningRate = c(0.02, 0.04, 0.06),
   maxDepth     = c(7),
   booster      = c('gbdt')
 )
-
+# i <- 1
 testResult <- foreach(i = 1:nrow(grid), .combine = function(a,b){ cbind(a, b)})%do% {
   tryCatch({
     

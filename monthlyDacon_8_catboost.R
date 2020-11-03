@@ -34,8 +34,8 @@ train[revVar] <- train %>% select(revVar) %>% mutate_all(list(~6 - .))
 test[revVar]  <- test %>% select(revVar) %>% mutate_all(list(~6 - .))
 
 QAvar <- train %>% select(matches("Q.A")) %>%  colnames
-# train$QA_var <- train %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
-# test$QA_var  <-  test %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
+train$QA_var <- train %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
+test$QA_var  <-  test %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
   
 #- 2. machia score = 전체 점수의 평균 값 계산
 machiaVar             <- train %>% select(matches("Q.A")) %>%  colnames
@@ -84,7 +84,7 @@ QE_var          <- train %>% select(matches("Q.E")) %>%  colnames
 train$QE_median <- apply(train[, QE_var], 1,  median)
 test$QE_median  <- apply(test[, QE_var], 1,   median)
 
-# #- 4.2 QE_median
+# #- 4.2 QE_min
 train$QE_min <- apply(train[, QE_var], 1,  min)
 test$QE_min  <- apply(test[, QE_var], 1,   min)
 
@@ -108,6 +108,7 @@ orderedFacVar <- c(
   # "wf_mean", 
   # "wr_mean" ,
   "voca_mean",
+  "familysize", 
   # "machiaScore",
   "tp_positive",
   "tp_negative",
@@ -139,18 +140,18 @@ test     <- test  %>%  dplyr::select(-all_of(remv_var))
 ############
 ## 모델링 ##
 ############
-#########################
-## 변수 제거 안한 경우 ##
-#########################
+#######################
+## 변수 제거 한 경우 ##
+#######################
 if(finalVarBoolean){
   set.seed(1)
   trainIdx <- createDataPartition(train[,"voted"], p = 0.7, list = F)
   trainData <- train[ trainIdx, c(finalVar, "voted")]
   testData  <- train[-trainIdx, c(finalVar, "voted")]
 }else{
-#######################
-## 변수 제거 한 경우 ##
-#######################
+#########################
+## 변수 제거 안한 경우 ##
+#########################
   set.seed(1)
   trainIdx  <- createDataPartition(train[,"voted"], p = 0.7, list = F)
   trainData <- train[ trainIdx, ]
@@ -189,7 +190,6 @@ catboost_imp           <- data.frame(model$feature_importances)
 catboost_imp$variables <- rownames(model$feature_importances)
 colnames(catboost_imp) <- c("importance", 'variables')
 catboost_imp           <- catboost_imp %>% arrange(-importance)
-View(catboost_imp)
 catboost_imp$variables
 catboost_imp$importance
 
@@ -202,7 +202,7 @@ YHat_cat   <- catboost.predict(
   prediction_type = c('Probability'))  # Probability, Class
 
 AUC_catboost <- mkAUCValue(
-  YHat = YHat_cat, 
+  YHat = (YHat_cat * 0.6) + (YHat_lgbm * 0.4), 
   Y    = ifelse(testData$voted == 2, 1, 0))
 
 ##- Caret package이 이용한 CatBoost 생성

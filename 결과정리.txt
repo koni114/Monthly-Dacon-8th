@@ -203,9 +203,6 @@ wf_mean, wr_mean 포함  --> 0.7666145 : label encoding으로 변환해서 그�
 [71] "hand"        "wf_02"       "wf_03"       "gender"      "wr_11"       "wr_01"       "wr_04"       "wr_05"       "wr_09"       "wr_07"      
 [81] "wf_01"       "wr_03"       "wr_10"       "wr_12"      
 
-
-
-
 LigthGBM
 [1] "age_group"   "education"   "race"        "married"     "religion"    "engnat"      "voca_mean"   "tp06"        "tp09"        "QsE"        
 [11] "tp04"        "QqA"         "machiaScore" "tp03"        "QeE"         "tp01"        "tp02"        "QqE"         "QlE"         "tp_var"     

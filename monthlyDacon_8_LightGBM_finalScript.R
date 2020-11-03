@@ -39,7 +39,7 @@ machiaVar             <- train %>% select(matches("Q.A")) %>%  colnames
 train$machiaScore     <- train %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
 test$machiaScore      <- test  %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
 
-# QAvar <- train %>% select(matches("Q.A")) %>%  colnames
+# # QAvar <- train %>% select(matches("Q.A")) %>%  colnames
 # train$QA_var <- train %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
 # test$QA_var  <-  test %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
 
@@ -79,15 +79,6 @@ test$tp_var        <- test %>% dplyr::select(c(tpPs, tpNg)) %>% transmute(test =
 train$tp_mean <- train %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (7 - tp02) + (7 - tp04) + (7 - tp06) + (7 - tp08) + (7 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
 test$tp_mean  <- test %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (7 - tp02) + (7 - tp04) + (7 - tp06) + (7 - tp08) + (7 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
 
-#- 4. QE derived Var
-#- 4.1 QE_median
-QE_var          <- train %>% select(matches("Q.E")) %>%  colnames
-train$QE_median <- apply(train[, QE_var], 1,  median)
-test$QE_median  <- apply(test[, QE_var], 1,   median)
-# 
-# #- 4.2 QE_median
-train$QE_min <- apply(train[, QE_var], 1,  min)
-test$QE_min  <- apply(test[, QE_var], 1,   min)
 
 ##############################
 ## 변수타입설정 & 변수 선택 ##
@@ -108,7 +99,7 @@ factor_var <- c("engnat",
 notEncodingFacVar <- c(
   # "wf_mean",
   # "wr_mean" ,
-  # "voca_mean",
+  "voca_mean",
   # "machiaScore",
   "tp_positive",
   "tp_negative",
@@ -180,11 +171,11 @@ categoricals.vec <- categoricals.vec[categoricals.vec %in% finalVar]
 ## 2. 반복량 7000
 ## 3. 나무 깊이 3,4,5,6,7
 ## 4. 부스팅 방법 gbdt, dart
-grid <- expand.grid(
+grid <- data.frame(
   learningRate = c(0.02, 0.04, 0.06),
   maxDepth     = c(7),
   booster      = c('gbdt'),
-  iter         = c(310, 129, 106)
+  iter         = c(314, 166, 93)
 )
 
 # i <- 1

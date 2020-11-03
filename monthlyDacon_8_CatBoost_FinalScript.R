@@ -33,7 +33,7 @@ revVar  <- c("QaA", "QdA", "QeA", "QfA", "QgA", "QiA", "QkA", "QnA", "QqA", "QrA
 train[revVar] <- train %>% select(revVar) %>% mutate_all(list(~6 - .))
 test[revVar]  <- test %>% select(revVar) %>% mutate_all(list(~6 - .))
 
-QAvar <- train %>% select(matches("Q.A")) %>%  colnames
+# QAvar <- train %>% select(matches("Q.A")) %>%  colnames
 # train$QA_var <- train %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
 # test$QA_var  <-  test %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
 
@@ -78,15 +78,6 @@ test$tp_var        <- test %>% dplyr::select(c(tpPs, tpNg)) %>% transmute(test =
 train$tp_mean <- train %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (7 - tp02) + (7 - tp04) + (7 - tp06) + (7 - tp08) + (7 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
 test$tp_mean  <- test %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (7 - tp02) + (7 - tp04) + (7 - tp06) + (7 - tp08) + (7 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
 
-#- 4. QE derived Var
-#- 4.1 QE_median
-QE_var          <- train %>% select(matches("Q.E")) %>%  colnames
-train$QE_median <- apply(train[, QE_var], 1,  median)
-test$QE_median  <- apply(test[, QE_var], 1,   median)
-
-# #- 4.2 QE_median
-train$QE_min <- apply(train[, QE_var], 1,  min)
-test$QE_min  <- apply(test[, QE_var], 1,   min)
 
 ###############################
 ## 변수타입 설정 & 변수 선택 ##
@@ -106,7 +97,7 @@ factor_var <- c("engnat",
 
 orderedFacVar <- c(
   # "wf_mean", 
-  # "wr_mean" ,
+  # "wr_mean",
   "voca_mean",
   # "machiaScore",
   "tp_positive",
@@ -144,7 +135,6 @@ test     <- test  %>%  dplyr::select(-all_of(remv_var))
 if(finalVarBoolean){
   trainData <- train[c(finalVar, 'voted')]
   testData  <- test[c(finalVar)]
-  
 }else{
   trainData <- train
   testData  <- test
@@ -186,7 +176,7 @@ catboost_imp$variables
 finalVar <- catboost_imp$variables[1:70]
 
 ######################
-## 변수 & 모델 저장 ##
+## 변수 & 모델 저장 ##k
 ######################
 save(model, file = paste0("catBoost_model_", ver,".RData"))
 save(finalVar, file = paste0("catBoost_finalVar_", ver,".RData"))
