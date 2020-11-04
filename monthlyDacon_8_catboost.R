@@ -1,6 +1,6 @@
 library(DMwR);library(dplyr);library(data.table);library(caret);library(catboost);library(Matrix);library(ROCR);library(lightgbm)
-setwd("C:/r/Monthly-Dacon-8th/")
-source('C:/r/Monthly-Dacon-8th/monthlyDacon_8_common.R')
+setwd("C:/r/Monthly-Dacon-8th-master/")
+source('C:/r/Monthly-Dacon-8th-master/monthlyDacon_8_common.R')
 finalVarBoolean <- F
 
 ##################
@@ -42,6 +42,7 @@ machiaVar             <- train %>% select(matches("Q.A")) %>%  colnames
 train$machiaScore     <- train %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
 test$machiaScore      <- test  %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
 
+
 #- 3 wf_mean, wr_mean, voca_mean(실제 단어를 아는 경우(wr)  - 허구인 단어를 아는 경우(wf) / 13)
 wfVar <- train %>% select(matches("wf.")) %>%  colnames
 wrVar <- train %>% select(matches("wr.")) %>%  colnames
@@ -78,15 +79,32 @@ test$tp_var        <- test %>% dplyr::select(c(tpPs, tpNg)) %>% transmute(test =
 train$tp_mean <- train %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (7 - tp02) + (7 - tp04) + (7 - tp06) + (7 - tp08) + (7 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
 test$tp_mean  <- test %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (7 - tp02) + (7 - tp04) + (7 - tp06) + (7 - tp08) + (7 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
 
+#- 2.1
+train$tp_Extra     <- train %>% transmute(tp_Extra = tp01 + (7 - tp06)) %>%  unlist %>% as.numeric
+test$tp_Extra      <- test  %>% transmute(tp_Extra = tp01 + (7 - tp06)) %>%  unlist %>% as.numeric 
+  
+train$tp_Agree     <- train %>% transmute(tp_Agree = (7 - tp02) + tp07) %>%  unlist %>% as.numeric
+test$tp_Agree      <- test %>% transmute(tp_Agree = (7 - tp02) + tp07) %>%  unlist  %>% as.numeric
+
+train$tp_Cons      <- train %>% transmute(tp_Cons = (7 - tp08) + tp03) %>%  unlist %>% as.numeric
+test$tp_Cons       <- test %>% transmute(tp_Cons = (7 - tp08) + tp03) %>%  unlist %>% as.numeric
+
+train$tp_Emo       <- train %>% transmute(tp_Emo = (7 - tp04) + tp09) %>%  unlist %>% as.numeric
+test$tp_Emo        <- test %>% transmute(tp_Emo = (7 - tp04) + tp09) %>%  unlist %>% as.numeric
+
+train$tp_Open      <- train %>% transmute(tp_Open = (7 - tp10) + tp05) %>%  unlist %>% as.numeric
+test$tp_Open       <- test %>% transmute(tp_Open = (7 - tp10) + tp05) %>%  unlist %>% as.numeric
+
+
 #- 4. QE derived Var
 #- 4.1 QE_median
-QE_var          <- train %>% select(matches("Q.E")) %>%  colnames
-train$QE_median <- apply(train[, QE_var], 1,  median)
-test$QE_median  <- apply(test[, QE_var], 1,   median)
+# QE_var          <- train %>% select(matches("Q.E")) %>%  colnames
+# train$QE_median <- apply(train[, QE_var], 1,  median)
+# test$QE_median  <- apply(test[, QE_var], 1,   median)
 
 # #- 4.2 QE_min
-train$QE_min <- apply(train[, QE_var], 1,  min)
-test$QE_min  <- apply(test[, QE_var], 1,   min)
+# train$QE_min <- apply(train[, QE_var], 1,  min)
+# test$QE_min  <- apply(test[, QE_var], 1,   min)
 
 ##############################
 ##변수타입설정 & 변수 선택 ##
@@ -109,6 +127,11 @@ orderedFacVar <- c(
   # "wr_mean" ,
   "voca_mean",
   "familysize", 
+  "tp_Extra",
+  "tp_Agree",
+  "tp_Cons",
+  "tp_Emo",
+  "tp_Open",
   # "machiaScore",
   "tp_positive",
   "tp_negative",
@@ -181,7 +204,7 @@ model <- catboost.train(
                 random_seed   = 123,           #- seed number
                 custom_loss   = "AUC",         #- 모델링 할 때 추가로 추출할 값들 (train_dir로 지정한 곳으로 해당 결과를 파일로 내보내준다)
                 # train_dir     = "./model/CatBoost_R_output", #- 모델링 한 결과를 저장할 directory
-                iterations    = 1000,                         #- 학습 iteration 수
+                iterations    = 500,                         #- 학습 iteration 수
                 metric_period = 10)
 )         
 
@@ -202,7 +225,7 @@ YHat_cat   <- catboost.predict(
   prediction_type = c('Probability'))  # Probability, Class
 
 AUC_catboost <- mkAUCValue(
-  YHat = (YHat_cat * 0.6) + (YHat_lgbm * 0.4), 
+  YHat = (YHat_cat), 
   Y    = ifelse(testData$voted == 2, 1, 0))
 
 ##- Caret package이 이용한 CatBoost 생성
