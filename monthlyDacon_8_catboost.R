@@ -1,6 +1,6 @@
 library(DMwR);library(dplyr);library(data.table);library(caret);library(catboost);library(Matrix);library(ROCR);library(lightgbm)
-setwd("C:/r/Monthly-Dacon-8th-master/")
-source('C:/r/Monthly-Dacon-8th-master/monthlyDacon_8_common.R')
+setwd("C:/r/Monthly-Dacon-8th/")
+source('C:/r/Monthly-Dacon-8th/monthlyDacon_8_common.R')
 finalVarBoolean <- F
 
 ##################
@@ -124,14 +124,8 @@ factor_var <- c("engnat",
 
 orderedFacVar <- c(
   # "wf_mean", 
-  # "wr_mean" ,
+  # "wr_mean",
   "voca_mean",
-  "familysize", 
-  "tp_Extra",
-  "tp_Agree",
-  "tp_Cons",
-  "tp_Emo",
-  "tp_Open",
   # "machiaScore",
   "tp_positive",
   "tp_negative",
@@ -197,6 +191,7 @@ train_pool <- catboost.load_pool(data = features, label = labels)
 
 # 2. catboost.train 함수를 이용하여 train
 set.seed(1)
+
 model <- catboost.train(
   train_pool,                                  #- 학습에 사용하고자 하는 train_pool  
   NULL,                                        #- 
@@ -236,7 +231,8 @@ trControl <- trainControl(
   number = 10, 
   verboseIter = T,
   savePredictions = TRUE, 
-  classProbs      = T)
+  classProbs      = T,
+  summaryFunction = twoClassSummary)
 
 
 modelResult <- train(

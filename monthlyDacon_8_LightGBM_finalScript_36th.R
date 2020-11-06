@@ -39,21 +39,17 @@ machiaVar             <- train %>% select(matches("Q.A")) %>%  colnames
 train$machiaScore     <- train %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
 test$machiaScore      <- test  %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
 
-# # QAvar <- train %>% select(matches("Q.A")) %>%  colnames
-# train$QA_var <- train %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
-# test$QA_var  <-  test %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
-
 #- 3 wf_mean, wr_mean, voca_mean(실제 단어를 아는 경우(wr)  - 허구인 단어를 아는 경우(wf) / 13)
 wfVar <- train %>% select(matches("wf.")) %>%  colnames
 wrVar <- train %>% select(matches("wr.")) %>%  colnames
 
 #- 3.1 wf_mean
-# train$wf_mean <- train %>% select(wfVar) %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
-# test$wf_mean  <- test %>% select(wfVar)  %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+train$wf_mean <- train %>% select(wfVar) %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+test$wf_mean  <- test %>% select(wfVar)  %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
 
 #- 3.2 wr_mean
-# train$wr_mean <- train %>% select(wrVar) %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
-# test$wr_mean  <- test %>% select(wrVar)  %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+train$wr_mean <- train %>% select(wrVar) %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+test$wr_mean  <- test %>% select(wrVar)  %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
 
 #- 3.3 voca_mean
 train$voca_mean <- train %>% transmute(voca_mean = (wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03)) %>% unlist %>% as.numeric
@@ -79,7 +75,6 @@ test$tp_var        <- test %>% dplyr::select(c(tpPs, tpNg)) %>% transmute(test =
 train$tp_mean <- train %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (7 - tp02) + (7 - tp04) + (7 - tp06) + (7 - tp08) + (7 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
 test$tp_mean  <- test %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (7 - tp02) + (7 - tp04) + (7 - tp06) + (7 - tp08) + (7 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
 
-
 ##############################
 ## 변수타입설정 & 변수 선택 ##
 ##############################
@@ -90,6 +85,7 @@ factor_var <- c("engnat",
                 "education",
                 "gender",
                 "hand",
+                # "familysize",
                 "married",
                 "race",
                 "religion",
@@ -97,8 +93,8 @@ factor_var <- c("engnat",
                 "voted")
 
 notEncodingFacVar <- c(
-  # "wf_mean",
-  # "wr_mean" ,
+  "wf_mean",
+  "wr_mean" ,
   "voca_mean",
   # "machiaScore",
   "tp_positive",
@@ -149,6 +145,69 @@ y_train      = trainData[, c("voted")]
 train.lgb        <- lgb.Dataset(data  = train_sparse, label = ifelse(y_train == 2, 1, 0))
 categoricals.vec <- c(factor_var[-Y_idx], ordered_var1, ordered_var2, notEncodingFacVar)
 
+## grid search
+## 1. 훈련량 0.01, 0.02 0.05, 0.07, 0.1
+## 2. 반복량 7000
+## 3. 나무 깊이 3,4,5,6,7
+## 4. 부스팅 방법 gbdt, dart
+grid <- data.frame(
+  learningRate = c(0.01, 0.01, 0.03),
+  maxDepth     = c(9, 7, 7)
+)
+
+g <- grid[1, ]
+learningRate <- g$learningRate
+maxDepth     <- g$maxDepth
+
+set.seed(1)
+lgb.grid = list(objective = "binary",
+                metric    = "auc",
+                min_sum_hessian_in_leaf = 1,
+                feature_fraction = 0.7,
+                bagging_fraction = 0.7,
+                bagging_freq = 5,
+                #min_data = 100,
+                #max_bin = 50,
+                lambda_l1 = 8,
+                lambda_l2 = 1.3,
+                #min_data_in_bin=100,
+                #min_gain_to_split = 10,
+                #min_data_in_leaf = 30,
+                is_unbalance = F)
+
+lgb.model.cv = lgb.cv(
+  params                = lgb.grid,
+  data                  = train.lgb,
+  learning_rate         = learningRate,                    #- *** 훈련량
+  max_depth             = maxDepth,
+  num_threads           = 2,                       #- * 병렬처리시 처리할 쓰레드
+  nrounds               = 7000,
+  early_stopping_rounds = 50,                      #- ** 더이상 발전이 없으면 그만두게 설정할때 이를 몇번동안 발전이 없으면 그만두게 할지 여부
+  eval_freq             = 20,
+  eval                  = lgb.normalizedgini,
+  categorical_feature   = categoricals.vec,
+  nfold                 = 10,
+  stratified            = TRUE)
+
+best.iter = lgb.model.cv$best_iter
+
+set.seed(1)
+lgb_model = lgb.train(
+  params              = lgb.grid, 
+  data                = train.lgb, 
+  learning_rate       = g$learningRate,              #- *** 훈련량  
+  #num_leaves          = 25,                         #- * 트리가 가질수 있는 최대 잎사귀 수
+  num_threads         = 2,                           #- * 병렬처리시 처리할 쓰레드
+  nrounds             = best.iter,                   #- *** 계속 나무를 반복하며 부스팅을 하는데 몇번을 할것인가이다. 1000이상정도는 해주도록 함
+  eval_freq           = 2)
+
+#- Create and Submit Predictions
+YHat_lgbm <- predict(lgb_model, test_sparse)
+
+tree_imp1  <- lgb.importance(lgb_model, percentage = TRUE)
+tree_imp1$Feature
+finalVar <- tree_imp1$Feature[1:70]
+
 #######################
 ## 변수 제거 한 경우 ##
 #######################
@@ -166,15 +225,6 @@ train.lgb        <- lgb.Dataset(data  = train_sparse, label = ifelse(y_train == 
 categoricals.vec <- c(factor_var[-Y_idx], ordered_var1, ordered_var2, notEncodingFacVar)
 categoricals.vec <- categoricals.vec[categoricals.vec %in% finalVar]
 
-## grid search
-## 1. 훈련량 0.01, 0.02 0.05, 0.07, 0.1
-## 2. 반복량 7000
-## 3. 나무 깊이 3,4,5,6,7
-## 4. 부스팅 방법 gbdt, dart
-grid <- data.frame(
-  learningRate = c(0.02, 0.04, 0.06),
-  maxDepth     = c(7)
-)
 
 # i <- 1
 testResult <- foreach(i = 1:nrow(grid), .combine = function(a,b){ cbind(a, b)})%do% {
@@ -183,11 +233,27 @@ testResult <- foreach(i = 1:nrow(grid), .combine = function(a,b){ cbind(a, b)})%
     learningRate <- g$learningRate
     maxDepth     <- g$maxDepth
     
+    set.seed(1)
+    lgb.grid = list(objective = "binary",
+                    metric    = "auc",
+                    min_sum_hessian_in_leaf = 1,
+                    feature_fraction = 0.7,
+                    bagging_fraction = 0.7,
+                    bagging_freq = 5,
+                    #min_data = 100,
+                    #max_bin = 50,
+                    lambda_l1 = 8,
+                    lambda_l2 = 1.3,
+                    #min_data_in_bin=100,
+                    #min_gain_to_split = 10,
+                    #min_data_in_leaf = 30,
+                    is_unbalance = F)
+    
     lgb.model.cv = lgb.cv(
       params                = lgb.grid,
       data                  = train.lgb,
-      learning_rate         = g$learningRate,                    #- *** 훈련량
-      max_depth             = g$maxDepth,
+      learning_rate         = learningRate,                    #- *** 훈련량
+      max_depth             = maxDepth,
       num_threads           = 2,                       #- * 병렬처리시 처리할 쓰레드
       nrounds               = 7000,
       early_stopping_rounds = 50,                      #- ** 더이상 발전이 없으면 그만두게 설정할때 이를 몇번동안 발전이 없으면 그만두게 할지 여부
@@ -200,6 +266,7 @@ testResult <- foreach(i = 1:nrow(grid), .combine = function(a,b){ cbind(a, b)})%
     best.iter = lgb.model.cv$best_iter
     # best.iter = 295
     
+    set.seed(1)
     lgb_model = lgb.train(
       params              = lgb.grid, 
       data                = train.lgb, 
@@ -207,16 +274,10 @@ testResult <- foreach(i = 1:nrow(grid), .combine = function(a,b){ cbind(a, b)})%
       #num_leaves          = 25,                         #- * 트리가 가질수 있는 최대 잎사귀 수
       num_threads         = 2,                           #- * 병렬처리시 처리할 쓰레드
       nrounds             = best.iter,                   #- *** 계속 나무를 반복하며 부스팅을 하는데 몇번을 할것인가이다. 1000이상정도는 해주도록 함
-      eval_freq           = 2)
+      eval_freq           = 20)
     
-    #- Create and Submit Predictions
-    YHat_lgbm <- predict(lgb_model, test_sparse)
-    
-    tree_imp1  <- lgb.importance(lgb_model, percentage = TRUE)
-    tree_imp1$Feature
-    finalVar <- tree_imp1$Feature[1:70]
-
-    gridCom       <- paste0(learningRate, "_", maxDepth, "_", booster)
+    YHat_lgbm     <- predict(lgb_model, test_sparse)
+    gridCom       <- paste0(learningRate, "_", maxDepth, "_", best.iter)
     tmp           <- data.frame(YHat_lgbm)
     colnames(tmp) <- gridCom
     tmp

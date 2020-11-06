@@ -1,7 +1,7 @@
-library(DMwR);library(dplyr);library(data.table);library(caret);library(catboost);
-library(Matrix);library(ROCR);library(lightgbm);library(CatEncoders);library(foreach);library(matrixStats)
+library(DMwR);library(dplyr);library(data.table);library(caret);library(catboost);library(Matrix);library(ROCR);library(lightgbm);library(foreach)
 setwd("C:/r/Monthly-Dacon-8th/")
 source('C:/r/Monthly-Dacon-8th/monthlyDacon_8_common.R')
+finalVarBoolean <- F
 
 ##################
 ## Data Loading ##
@@ -24,36 +24,36 @@ test  <- data.table::fread(
   data.table = F,
   na.strings = c("NA", "NaN", "NULL", "\\N"))
 
-
-###########################
-## 파생변수 생성 및 변경 ##
-###########################
+# ###########################
+# ## 파생변수 생성 및 변경 ##
+# ###########################
 #- 1. reverse 
 #- QaA, QdA, QeA, QfA, QgA, QiA, QkA, QnA, QqA, QrA --> reverse 
 revVar  <- c("QaA", "QdA", "QeA", "QfA", "QgA", "QiA", "QkA", "QnA", "QqA", "QrA")
-train[revVar] <- train %>% select(all_of(revVar)) %>% mutate_all(list(~6 - .))
-test[revVar]  <- test %>% select(all_of(revVar)) %>% mutate_all(list(~6 - .))
+train[revVar] <- train %>% select(revVar) %>% mutate_all(list(~6 - .))
+test[revVar]  <- test %>% select(revVar) %>% mutate_all(list(~6 - .))
+
+QAvar <- train %>% select(matches("Q.A")) %>%  colnames
+train$QA_var <- train %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
+test$QA_var  <-  test %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
 
 #- 2. machia score = 전체 점수의 평균 값 계산
 machiaVar             <- train %>% select(matches("Q.A")) %>%  colnames
 train$machiaScore     <- train %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
 test$machiaScore      <- test  %>% select(machiaVar) %>% transmute(machiaScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
 
-QAvar <- train %>% select(matches("Q.A")) %>%  colnames
-train$QA_var <- train %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
-test$QA_var  <-  test %>% dplyr::select(c(QAvar)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric
 
 #- 3 wf_mean, wr_mean, voca_mean(실제 단어를 아는 경우(wr)  - 허구인 단어를 아는 경우(wf) / 13)
 wfVar <- train %>% select(matches("wf.")) %>%  colnames
 wrVar <- train %>% select(matches("wr.")) %>%  colnames
 
 #- 3.1 wf_mean
-train$wf_mean <- train %>% select(wfVar) %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
-test$wf_mean  <- test %>% select(wfVar)  %>% transmute(wf_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+# train$wf_mean <- train %>% select(wfVar) %>% transmute(wf_mean = round(rowSums(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+# test$wf_mean  <- test %>% select(wfVar)  %>% transmute(wf_mean = round(rowSums(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
 
 #- 3.2 wr_mean
-train$wr_mean <- train %>% select(wrVar) %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
-test$wr_mean  <- test %>% select(wrVar)  %>% transmute(wr_mean = round(rowMeans(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+# train$wr_mean <- train %>% select(wrVar) %>% transmute(wr_mean = round(rowSums(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
+# test$wr_mean  <- test %>% select(wrVar)  %>% transmute(wr_mean = round(rowSums(across(where(is.numeric))), 8)) %>% unlist %>% as.numeric
 
 #- 3.3 voca_mean
 train$voca_mean <- train %>% transmute(voca_mean = (wr_01 + wr_02 + wr_03 + wr_04 + wr_05 + wr_06 + wr_07 + wr_08 + wr_09 + wr_10 + wr_11 + wr_12 + wr_13 - wf_01 - wf_02 - wf_03)) %>% unlist %>% as.numeric
@@ -64,12 +64,12 @@ tpPs <- c("tp01", "tp03", "tp05", "tp07", "tp09")
 tpNg <- c("tp02", "tp04", "tp06", "tp08", "tp10")
 
 #- 3.4 tp_positive
-train$tp_positive  <- train %>% select(all_of(tpPs)) %>% transmute(tp_positive = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
-test$tp_positive   <- test  %>% dplyr::select(all_of(tpPs)) %>% transmute(tp_positive = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
+train$tp_positive  <- train %>% select(all_of(tpPs)) %>% transmute(tp_positive = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric
+test$tp_positive   <- test  %>% dplyr::select(all_of(tpPs)) %>% transmute(tp_positive = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric
 
 #- 3.5 tp_negative 
-train$tp_negative  <- train %>% dplyr::select(all_of(tpNg)) %>% transmute(tp_negative = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
-test$tp_negative   <- test  %>% dplyr::select(all_of(tpNg)) %>% transmute(tp_negative = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric 
+train$tp_negative  <- train %>% dplyr::select(all_of(tpNg)) %>% transmute(tp_negative = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric
+test$tp_negative   <- test  %>% dplyr::select(all_of(tpNg)) %>% transmute(tp_negative = round(rowMeans(across(where(is.numeric))), 8)) %>%  unlist %>% as.numeric
 
 #- 3.6 tp_variance
 train$tp_var       <- train %>% dplyr::select(c(tpPs, tpNg)) %>% transmute(test = round(RowVar(across(where(is.numeric))), 4)) %>%  unlist %>% as.numeric 
@@ -78,6 +78,33 @@ test$tp_var        <- test %>% dplyr::select(c(tpPs, tpNg)) %>% transmute(test =
 #- 3.7 tp_mean
 train$tp_mean <- train %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (7 - tp02) + (7 - tp04) + (7 - tp06) + (7 - tp08) + (7 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
 test$tp_mean  <- test %>% transmute(tp_mean = round(((tp01 + tp03 + tp05 + tp07 + tp09 + (7 - tp02) + (7 - tp04) + (7 - tp06) + (7 - tp08) + (7 - tp10)) / 10), 8)) %>%  unlist %>% as.numeric
+
+#- 2.1
+# train$tp_Extra     <- train %>% transmute(tp_Extra = tp01 + (7 - tp06)) %>%  unlist %>% as.numeric
+# test$tp_Extra      <- test  %>% transmute(tp_Extra = tp01 + (7 - tp06)) %>%  unlist %>% as.numeric
+# 
+# train$tp_Agree     <- train %>% transmute(tp_Agree = (7 - tp02) + tp07) %>%  unlist %>% as.numeric
+# test$tp_Agree      <- test %>% transmute(tp_Agree = (7 - tp02) + tp07) %>%  unlist  %>% as.numeric
+# 
+# train$tp_Cons      <- train %>% transmute(tp_Cons = (7 - tp08) + tp03) %>%  unlist %>% as.numeric
+# test$tp_Cons       <- test %>% transmute(tp_Cons = (7 - tp08) + tp03) %>%  unlist %>% as.numeric
+# 
+# train$tp_Emo       <- train %>% transmute(tp_Emo = (7 - tp04) + tp09) %>%  unlist %>% as.numeric
+# test$tp_Emo        <- test %>% transmute(tp_Emo = (7 - tp04) + tp09) %>%  unlist %>% as.numeric
+# 
+# train$tp_Open      <- train %>% transmute(tp_Open = (7 - tp10) + tp05) %>%  unlist %>% as.numeric
+# test$tp_Open       <- test %>% transmute(tp_Open = (7 - tp10) + tp05) %>%  unlist %>% as.numeric
+
+
+#- 4. QE derived Var
+#- 4.1 QE_median
+# QE_var          <- train %>% select(matches("Q.E")) %>%  colnames
+# train$QE_median <- apply(train[, QE_var], 1,  median)
+# test$QE_median  <- apply(test[, QE_var], 1,   median)
+
+# #- 4.2 QE_min
+# train$QE_min <- apply(train[, QE_var], 1,  min)
+# test$QE_min  <- apply(test[, QE_var], 1,   min)
 
 ##############################
 ## 변수타입설정 & 변수 선택 ##
@@ -97,15 +124,19 @@ factor_var <- c("engnat",
 
 notEncodingFacVar <- c(
   "wf_mean",
-  "wr_mean" ,
+  "wr_mean",
   "voca_mean",
-  "familysize", 
-  "machiaScore",
-  "tp_positive",
-  "tp_negative",
+  # "machiaScore",
+  # "tp_positive",
+  # "tp_negative",
   "tp_var",
-  "tp_mean"
-  )
+  "tp_mean",
+  "tp_Extra",
+  'tp_Agree',
+  'tp_Cons',
+  'tp_Emo',
+  'tp_Open'
+)
 
 for(i in factor_var){
   encode      <- CatEncoders::LabelEncoder.fit( train[,i])
@@ -179,8 +210,8 @@ categoricals.vec <- categoricals.vec[categoricals.vec %in% finalVar]
 ## 3. 나무 깊이 3,4,5,6,7
 ## 4. 부스팅 방법 gbdt, dart
 grid <- data.frame(
-  learningRate = c(0.02, 0.04, 0.06),
-  maxDepth     = c(7),
+  learningRate = c(0.07, 0.02, 0.01),
+  maxDepth     = c(6, 9, 6),
   booster      = c('gbdt')
 )
 # i <- 1
@@ -259,7 +290,7 @@ testResult <- foreach(i = 1:nrow(grid), .combine = function(a,b){ cbind(a, b)})%
   }, error = function(err) {return(NULL)})
 }
 
-YHat_lgbm <- testResult %>% transmute(finalScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
+YHat_lgbm <- testResult[,1]
 
 AUC_lgbm  <- mkAUCValue(
   YHat = YHat_lgbm, 
