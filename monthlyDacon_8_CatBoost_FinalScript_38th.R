@@ -198,6 +198,7 @@ testResult <- foreach(i = 1:nrow(grid), .combine = function(a,b){ cbind(a, b)}) 
                   metric_period = 10)            
   )         
   
+  
   real_pool  <- catboost.load_pool(testData_cat)
   YHat_cat   <- catboost.predict(
     model, 
@@ -212,7 +213,9 @@ testResult <- foreach(i = 1:nrow(grid), .combine = function(a,b){ cbind(a, b)}) 
 
 YHat_cat <- testResult_Catboost %>% transmute(finalScore = rowMeans(across(where(is.numeric)))) %>% unlist %>% as.numeric
 
+YHat_cat <- testResult_Catboost[,1 ]
+
 save(YHat_cat, file = "YHat_cat.RData")
 
-sample_submission$voted <- (YHat_cat * 0.6) +  (YHat_lgbm * 0.4)
+sample_submission$voted <- YHat_cat
 write.csv(sample_submission, "submission_data.csv", row.names = F)
