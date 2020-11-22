@@ -217,5 +217,5 @@ YHat_cat <- testResult_Catboost[,1 ]
 
 save(YHat_cat, file = "YHat_cat.RData")
 
-sample_submission$voted <- YHat_cat
+sample_submission$voted <- (YHat_NN$voted - 1) * 0.6 + YHat_cat * 0.4 
 write.csv(sample_submission, "submission_data.csv", row.names = F)
