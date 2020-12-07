@@ -1,0 +1,114 @@
+###############
+## 컬럼 정보 ##
+###############
+## monthly dacon 8
+## 데이터 셋 간략 정리
+## train Dataset
+## row num : 45532, col num : 78
+
+## 컬럼 종류
+## 1. index
+## 2. Q_A / Q_E (a~t) : 비식별화를 위해 일부 질문은 Secret 처리
+## 3. Q_E(a~t)        : 질문을 답할 때까지의 시간
+## 4. age_group       : 연령
+## 5. education       : 교육 수준
+##                      (1 = Less than high school, 2=High school, 3=University degree, 4=Graduate degree, 0=무응답)
+## engnat             : 모국어가 영어
+##                      1 = Yes, 2 = No, 0 = 무응답
+## 6. familysize      : 형제자매 수
+## 7. gender          : 성별
+##                      Male, Female
+## 8. hand            : 필기하는 손
+##                      1=Right, 2=Left, 3=Both, 0=무응답
+## 9. married         : 혼인 상태
+##                      1=Never married, 2=Currently married, 3=Previously married, 0=Other
+## 10. race           : 인종
+##                      Asian, Arab, Black, Indigenous Australian, Native American, White, Other
+## 11. religion       : 종교
+##                      Agnostic, Atheist, Buddhist, Christian_Catholic, Christian_Mormon, 
+##                      Christian_Protestant, Christian_Other, Hindu, Jewish, Muslim, Sikh, Other
+## tp__(01~10)        : items were rated "I see myself as:" _____ such that
+##                      tp01 : Extraverted, enthusiastic(외향적이고 열정적입니다)                        - 
+##                      tp02 : Critical, quarrelsome(비판적이고 논쟁 적입니다)
+##                      tp03 : Dependable, self-disciplined(신뢰할 수 있고 자기 훈련)                  -
+##                      tp04 : Anxious, easily upset (불안하고 쉽게 화를 낸다)
+##                      tp05 : Open to new experiences, complex(새로운 경험에 개방적, 복잡한)    -
+##                      tp06 : Reserved, quiet(내성적이고 조용함)
+##                      tp07 : Sympathetic, warm(공감, 따뜻함)                                                -
+##                      tp08 : Disorganized, careless(무질서, 부주의)
+##                      tp09 : Calm, emotionally stable(조용하고 정서적으로 안정)                       - 
+##                      tp10 : Conventional, uncreative(관습적이고 비창조적)
+##                      --> 1에 가까울수록, 본인의 생각의 정도가 강한 것.
+
+## urban               : 유년기의 거주 구역
+##                       1 = Rural(country side), 2 = Suburban, 3 = Urban(town, city), 0 = 무응답
+## wr_(01~13)          : 실존하는 해당 단어의 정의을 앎
+##                       1=Yes, 0=No
+## wf_(01~03)          : 허구인 단어의 정의를 앎
+##                       1=Yes, 0=No
+
+
+## 2020-10-10
+## 26등
+
+catboost + LightGBM assemble model , 전처리 없음
+train/test : 0.7
+catboost   : 0.7656385
+LightGBM : 0.7683261
+final        :  0.7696434
+--> catboost caret package 적용 후 제출했는데, 더 나빠짐.. 
+
+투표를 했다라고 예측 했지만, 실제로는 투표하지 않은 숫자가 많음
+               Reference
+Prediction    0    1
+         0 4648 2567
+         1 1542 4902
+
+- 전처리 이후,
+LightGBM : 0.7685886
+
+- 수치형 log 변환
+  --> 오히려 성능이 낮아짐 
+LightGBM : 0.7682284
+
+- MachiaScore 파생변수 추가 후,
+LightGBM : 0.7692429
+catboost   : 0.7691375 --> interation 1000으로 증가
+final         : 
+
+** 모델 둘 다 맞추지 못한 데이터를 확인해보자.
+- 투표를 했는데,(Yes, 0), 투표를 하지 않았다고 예측한 경우,(No, 1)
+
+- 투표를 하지 않았는데(No, 1), 투표를 했다고 예측한 경우, (Yes, 0)
+
+
+#### voca_mean, wf_mean, wr_mean 파생변수 추가
+catboost   : 0.7700609
+LightGBM :  0.7695492        
+         
+############
+# 2020-10-12 #
+############
+
+#- tp_mean, tp_negative, tp_positive 파생변수 추가
+catboost   : 0.7709819
+LightGBM : 0.7684896    
+         
+
+##############
+## Insight 정리 ##
+##############
+- CatBoost 변수 중요도 확인 결과,
+wf, tp는 크게 영향도가 높지 않고, 대부분 설문지 문항을 고르는데
+걸리는 시간(Q_E),과 대부분의 인적 사항이 영향이 있었음
+상위 10개 변수
+education > age_group > race > religion > QqE > QsE > QdE > married > QhE > QmE.. 
+
+- LightGBM 변수 중요도 확인 결과
+age_group, education, race, married, tp06, tp03, tp04
+
+ 
+
+
+
+

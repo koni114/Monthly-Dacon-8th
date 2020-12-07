@@ -1,0 +1,295 @@
+## 제출 history 관리
+작성 사항.
+- 데이터 전처리 사항
+- 모델링 수행(간단한 특징 작성)
+- 이번 제출 시 가장 특징적인 사항
+- Score 작성
+- Score가 왜 그렇게 나왔는지에 대한 간략한 생각들 정리.. 
+  ex) 왜 score가 낮게 나왔는가..?
+      왜 갑자기 성능이 좋게 나왔는가..? 
+
+################
+## 15번 제출 사항 ##
+#################
+- 데이터 전처리 사항
+변수 중요도 확인시, 
+파생변수 생성 :  wf_mean, wr_mean, voca_mean
+ 
+- 모델링 수행
+catboost    : 0.7700609
+LightGBM  :  0.7695492        
+
+최종 Score : 0.77854575
+
+- 생각 정리
+Score가 전반적으로 좋아짐.
+변수 중요도가 낮은, wf., wr. variable 들을 주요 인자의 파생변수를 생성함으로써
+Score 상승에 영향을 미침
+
+################
+## 16번 제출 사항 ##
+#################
+- 데이터 전처리 사항
+파생변수 생성 :  wf_mean, wr_mean, voca_mean
+파생변수 추가 :  tp_mean, tp_negative, tp_positive
+
+- 모델링 수행
+catboost   : 0.7709819
+LightGBM : 0.7684896    
+
+최종 Score : 0.7780148069	
+
+- 생각 정리
+Score가 오히려 낮아짐..
+오히려 overfitting된 결과라고 생각함.
+모델 학습 interation을 좀 낮춰서 다시 예측할 필요성 있음.
+
+
+################
+## 17번 제출 사항 ##
+#################
+- 데이터 전처리 사항
+*CatBoost 
+파생변수 생성 :  wf_mean, wr_mean, voca_mean
+파생변수 추가 :  tp_mean, tp_negative, tp_positive
+*LightGBM 
+파생변수 생성 :  wf_mean, wr_mean, voca_mean
+
+CatBoost  :  0.7692163
+LightGBM :  0.7695492
+Assemble Score : 0.7714692
+
+CatBoost Importance 
+ [1] "education"   "age_group"   "race"        "religion"    "engnat"      "QsE"         "QqE"         "QeE"         "QcE"         "married"    
+[11] "QbE"         "QlE"         "QaE"         "QhE"         "QjE"         "QmE"         "QpE"         "QiE"         "QgE"         "QoE"        
+[21] "QkE"         "QnE"         "QtE"         "QrE"         "QdE"         "tp02"        "machiaScore" "voca_mean"   "familysize"  "QfE"        
+[31] "tp09"        "tp06"        "tp_mean"     "QqA"         "tp10"        "tp04"        "QaA"         "wf_mean"     "QtA"         "tp03"       
+[41] "tp07"        "QgA"         "wr_mean"     "QbA"         "QsA"         "QfA"         "wr_06"       "tp_negative" "QoA"         "tp01"       
+[51] "QdA"         "QkA"         "QmA"         "urban"       "wr_02"       "tp08"        "QnA"         "QiA"         "QpA"         "tp_positive"
+[61] "gender"      "QjA"         "QeA"         "tp05"        "wr_01"       "QhA"         "wf_02"       "wf_03"       "QrA"         "QcA"        
+[71] "wr_08"       "QlA"         "wr_09"       "hand"        "wr_13"       "wr_11"       "wr_04"       "wr_03"       "wr_07"       "wr_10"      
+[81] "wf_01"       "wr_05"       "wr_12"    
+
+LightGBM Importance
+  [1] "age_group.10s"                 "education"                     "race.White"                    "race.Asian"                   
+  [5] "married.2"                     "married.1"                     "age_group.20s"                 "age_group.30s"                
+  [9] "tp06"                          "religion.Other"                "age_group.40s"                 "tp03"                         
+ [13] "tp01"                          "tp07"                          "QqA"                           "tp04"                         
+ [17] "tp09"                          "tp02"                          "machiaScore"                   "voca_mean"                    
+ [21] "tp08"                          "QsE"                           "QeE"                           "QlE"                          
+ [25] "engnat.1"                      "QqE"                           "QaE"                           "QnE"                          
+ [29] "QjE"                           "QmE"                           "married.3"                     "QoE"                          
+ [33] "QpE"                           "QrE"                           "QhE"                           "QfE"                          
+ [37] "QcE"                           "QbE"                           "wr_06"                         "QdE"                          
+ [41] "QgE"                           "QkE"                           "religion.Christian_Protestant" "age_group.50s"                
+ [45] "QtE"                           "familysize"                    "QiE"                           "tp10"                         
+ [49] "age_group.60s"                 "engnat.2"                      "tp05"                          "QiA"                          
+ [53] "QbA"                           "QrA"                           "QaA"                           "urban.3"                      
+ [57] "religion.Christian_Catholic"   "QpA"                           "QgA"                           "QjA"                          
+ [61] "wf_02"                         "QoA"                           "QkA"                           "QhA"                          
+ [65] "QnA"                           "QfA"                           "QsA"                           "QcA"                          
+ [69] "QmA"                           "QdA"                           "QtA"                           "QeA"                          
+ [73] "religion.Hindu"                "QlA"                           "wr_11"                         "wr_01"                        
+ [77] "race.Other"                    "religion.Atheist"              "wf_01"                         "wf_03"                        
+ [81] "wr_09"                         "religion.Buddhist"             "religion.Christian_Other"      "gender.Female"                
+ [85] "urban.1"                       "religion.Muslim"               "religion.Agnostic"             "wr_13"                        
+ [89] "religion.Jewish"               "urban.2"                       "gender.Male"                   "age_group..70s"               
+ [93] "wr_05"                         "wr_03"                         "hand.2"                        "wr_02"                        
+ [97] "race.Arab"                     "wr_07"                         "wr_mean"                       "religion.Christian_Mormon"    
+[101] "race.Black"                    "wr_04"                         "wr_10"                         "hand.1"                       
+[105] "wr_12"                         "wf_mean"     
+
+################
+## 18번 제출 사항 ##
+#################
+- education 변수 --> 범주형으로 변환
+- 가중치 CatBoost : LightGBM = 6:4 로 부여 후 assemble 
+
+- 데이터 전처리 사항
+  - 앞과 동일
+
+- 최종 Score  : 0.7788
+
+################
+## 19번 제출 사항 ##
+#################
+- CatBoost seed 값 다르게하여 3개의 모델 생성 후 Assemble
+seed : 1, 123, 2020
+
+- CatBoost Model1 :   0.771478
+- CatBoost Model2 :   0.7721318
+- CatBoost Model3 :   0.7714287
+- Assemble Score   :   0.7729286
+
+
+################
+## 20번 제출 사항 ##
+################
+- 데이터 전처리 사항
+  - 파생변수 추가 : tp_var : tp01 ~ tp10 까지의 분산 값 계산
+
+CatBoost  : 0.7727976(평균값들은 전부 수치형 처리)
+
+[1] "education"   "age_group"   "race"        "religion"    "QsE"         "QqE"         "engnat"      "married"     "tp_var"      "QrE"         "QcE"        
+[12] "QmE"         "QlE"         "QhE"         "QkE"         "QiE"         "QnE"         "QbE"         "QeE"         "QoE"         "QjE"         "QtE"        
+[23] "QgE"         "QpE"         "QfE"         "QaE"         "QdE"         "machiaScore" "familysize"  "tp02"        "tp_positive" "voca_mean"   "tp_mean"    
+[34] "QqA"         "tp09"        "tp10"        "tp06"        "wr_mean"     "QgA"         "QsA"         "tp07"        "QaA"         "wr_06"       "tp08"       
+[45] "tp04"        "QbA"         "tp_negative" "urban"       "QiA"         "QkA"         "wf_mean"     "QdA"         "QoA"         "QcA"         "QmA"        
+[56] "QnA"         "QpA"         "QtA"         "QrA"         "tp01"        "QjA"         "tp03"        "tp05"        "QfA"         "QlA"         "wr_02"      
+[67] "wr_08"       "QhA"         "gender"      "QeA"         "wr_13"       "wf_02"       "wr_01"       "wf_03"       "wr_09"       "wr_11"       "hand"       
+[78] "wf_01"       "wr_10"       "wr_04"       "wr_03"       "wr_05"       "wr_07"       "wr_12"      
+
+LightGBM : 0.7689622
+
+ [1] "age_group.10s"                 "education.1"                   "education.2"                   "race.White"                    "married.1"                    
+  [6] "education.3"                   "race.Asian"                    "age_group.20s"                 "married.2"                     "age_group.30s"                
+ [11] "religion.Other"                "age_group.40s"                 "tp06"                          "tp_mean"                       "tp_positive"                  
+ [16] "QsE"                           "machiaScore"                   "QeE"                           "education.4"                   "QqA"                          
+ [21] "tp09"                          "tp02"                          "tp01"                          "tp04"                          "tp07"                         
+ [26] "voca_mean"                     "QlE"                           "QaE"                           "tp03"                          "QqE"                          
+ [31] "QmE"                           "QpE"                           "QoE"                           "QhE"                           "engnat.1"                     
+ [36] "tp08"                          "religion.Christian_Protestant" "QrE"                           "tp_var"                        "QkE"                          
+ [41] "QdE"                           "engnat.2"                      "QgE"                           "QnE"                           "wr_mean"                      
+ [46] "QjE"                           "QtE"                           "QfE"                           "QcE"                           "QbE"                          
+ [51] "wr_06"                         "familysize"                    "QiE"                           "tp10"                          "QrA"                          
+ [56] "QiA"                           "married.3"                     "religion.Christian_Catholic"   "urban.3"                       "QbA"                          
+ [61] "QaA"                           "QjA"                           "tp05"                          "QgA"                           "tp_negative"                  
+ [66] "QkA"                           "wf_mean"                       "QdA"                           "QpA"                           "QoA"                          
+ [71] "QhA"                           "age_group.50s"                 "QsA"                           "age_group.60s"                 "QfA"                          
+ [76] "QcA"                           "QeA"                           "QtA"                           "QnA"                           "QmA"                          
+ [81] "wf_02"                         "religion.Hindu"                "religion.Atheist"              "QlA"                           "wr_09"                        
+ [86] "wr_01"                         "race.Other"                    "gender.Female"                 "wr_11"                         "religion.Christian_Other"     
+ [91] "religion.Muslim"               "religion.Buddhist"             "wr_13"                         "religion.Agnostic"             "religion.Jewish"              
+ [96] "education.0"                   "urban.1"                       "wf_03"                         "urban.2"                       "wf_01"                        
+[101] "wr_02"                         "gender.Male"                   "wr_03"                         "race.Black"                    "race.Arab"                    
+[106] "wr_05"                         "religion.Christian_Mormon"     "hand.2"                        "hand.1"                        "wr_07"                        
+[111] "wr_08"                         "wr_04"     
+
+################
+## 21번 제출 사항 ##
+################
+- 데이터 전처리 사항
+- 모델링 수행(간단한 특징 작성)
+- 이번 제출 시 가장 특징적인 사항
+  - CatBoost 3번 Assemble
+  - LightGBM 3번 Assemble
+
+--> 결과는 훨씬 안좋게 나옴..
+
+
+################
+## 22번 제출 사항 ##
+################
+- 데이터 전처리 사항
+  - 
+- 모델링 수행(간단한 특징 작성)
+- 이번 제출 시 가장 특징적인 사항
+  - LightGBM 수행시, 기존 OneHot encoding 수행 --> label Encoding으로 전환 후, 모델 수행시 factor value 지정
+  - 전체 parameter 개수에서, Importance 기준 70개만 추출
+  - CatBoost : LightGBM = 6 : 4
+
+
+CatBoost
+wf_mean, wr_mean 제외. --> 0.7720197
+wf_mean, wr_mean 포함  --> 0.7666145 : label encoding으로 변환해서 그럴수도.. 
+
+ [1] "education"   "age_group"   "race"        "religion"    "wf_mean"     "engnat"      "QqE"         "married"     "QsE"         "QeE"        
+[11] "QoE"         "QkE"         "QhE"         "QqA"         "QpE"         "QmE"         "QgE"         "QjE"         "QfE"         "QiE"        
+[21] "QnE"         "tp06"        "QtE"         "QdE"         "QrE"         "QcE"         "QaE"         "QjA"         "QlE"         "voca_mean"  
+[31] "QbE"         "familysize"  "wr_mean"     "tp_var"      "tp_mean"     "tp09"        "tp02"        "machiaScore" "tp_positive" "QaA"        
+[41] "tp03"        "tp_negative" "QgA"         "QmA"         "tp04"        "QrA"         "QiA"         "tp07"        "QsA"         "urban"      
+[51] "wr_06"       "QbA"         "QkA"         "QpA"         "tp10"        "QcA"         "QdA"         "tp08"        "QoA"         "tp05"       
+[61] "wr_02"       "QfA"         "tp01"        "QtA"         "QeA"         "QnA"         "wr_08"       "QlA"         "QhA"         "wr_13"      
+[71] "hand"        "wf_02"       "wf_03"       "gender"      "wr_11"       "wr_01"       "wr_04"       "wr_05"       "wr_09"       "wr_07"      
+[81] "wf_01"       "wr_03"       "wr_10"       "wr_12"      
+
+LigthGBM
+[1] "age_group"   "education"   "race"        "married"     "religion"    "engnat"      "voca_mean"   "tp06"        "tp09"        "QsE"        
+[11] "tp04"        "QqA"         "machiaScore" "tp03"        "QeE"         "tp01"        "tp02"        "QqE"         "QlE"         "tp_var"     
+[21] "QjE"         "QnE"         "tp07"        "QmE"         "QdE"         "QoE"         "QrE"         "tp08"        "QaE"         "QpE"        
+[31] "wr_06"       "QcE"         "QkE"         "QhE"         "tp_positive" "urban"       "QfE"         "QgE"         "QbE"         "QiE"        
+[41] "familysize"  "QtE"         "tp10"        "QiA"         "QjA"         "QaA"         "QbA"         "tp_mean"     "QkA"         "wf_02"      
+[51] "QrA"         "QsA"         "tp05"        "QoA"         "QgA"         "QfA"         "QcA"         "QpA"         "QdA"         "QeA"        
+[61] "tp_negative" "QtA"         "QhA"         "wr_01"       "QmA"         "wr_11"       "QnA"         "wr_09"       "QlA"         "wf_01"      
+[71] "gender"      "wf_03"       "wr_03"       "wr_05"       "hand"        "wr_02"       "wr_13"       "wr_04"       "wr_10"       "wf_mean"    
+[81] "wr_mean"    
+
+최종 Socore : 0.77937
+
+#####################
+## CatBoost Case별 정리 ##
+#####################
+- wf_mean, wr_mean, QA_var 수치형, 나머지 범주형 적용        : 0.7707588
+- wf_mean, wr_mean 제거,  QA_var 수치형, 나머지 범주형 적용 : 0.7723143
+
+- wf_mean, wr_mean, QA_var 제거,  나머지 범주형 적용          : 0.7727475
+- wf_mean, wr_mean, QA_var 제거,  나머지 범주형 적용, 변수 70개로 짜름 : 0.7729025
+- wf_mean, wr_mean, QA_var 제거,  나머지 범주형 적용, 변수 60개로 짜름 : 0.7712863
+
+- wf_mean, wr_mean, QA_var 포함,  tp_var 범주형 처리                        :  0.771833
+- wf_mean, wr_mean, QA_var 포함, 변수 70개로 짜름, tp_var 범주형 처리 :
+
+######################
+## LightGBM Case별 정리 ##
+######################
+
+"wf_mean", "wr_mean",    "tp_positive" "tp_negative" "tp_var", "tp_mean" 범주형, QA_var 수치형,       :  0.7704728
+"wf_mean", "wr_mean",    "tp_positive" "tp_negative", "tp_mean" 범주형,  "tp_var", "QA_var" 수치형,   :  0.770871
+"wf_mean", "wr_mean",    "tp_positive" "tp_negative", "tp_mean" 범주형,  "tp_var", "QA_var" 수치형,   : parameter 70개로 짜름 :  0.7703737
+                                                                                         
+
+################
+## 23번 제출 사항 ##
+################
+작성 사항.
+- 데이터 전처리 사항
+  CatBoost  : wf_mean, wr_mean, QA_var 제거,  나머지 범주형 적용
+
+[1] "education"   "age_group"   "race"        "religion"    "married"     "QqE"         "QtA"         "QsE"         "engnat"      "QcE"         "QeE"        
+[12] "QoE"         "QgA"         "QrE"         "QhE"         "QpE"         "QiE"         "voca_mean"   "QnE"         "QjE"         "machiaScore" "QmE"        
+[23] "tp_mean"     "QlE"         "QkE"         "QgE"         "QaE"         "QdE"         "QfE"         "tp_var"      "QbE"         "QtE"         "tp02"       
+[34] "tp06"        "QqA"         "familysize"  "tp09"        "QoA"         "wr_06"       "tp04"        "urban"       "tp_positive" "QkA"         "tp08"       
+[45] "tp_negative" "tp03"        "QdA"         "QaA"         "QsA"         "tp07"        "QmA"         "QpA"         "QrA"         "QjA"         "wf_02"      
+[56] "tp10"        "tp05"        "QbA"         "tp01"        "QiA"         "QnA"         "QhA"         "QeA"         "QfA"         "wr_02"       "wf_03"      
+[67] "hand"        "wf_01"       "wr_08"       "QcA"         "gender"      "QlA"         "wr_11"       "wr_01"       "wr_13"       "wr_04"       "wr_09"      
+[78] "wr_03"       "wr_07"       "wr_12"       "wr_05"       "wr_10" 
+
+  LightGBM : 3개 모델 Assemble : 0.7713039 
+                 0.01, 6, gbdt,  811,   :  0.7713741
+                 0.02, 7, gbdt,  341,   :  0.7707429
+                 0.02  6, gbdt,  346   :  0.770953
+
+[1] "age_group"   "education"   "race"        "married"     "religion"    "engnat"      "voca_mean"   "tp06"        "QqA"         "tp09"       
+[11] "tp02"        "QeE"         "QsE"         "tp01"        "QqE"         "tp03"        "tp07"        "machiaScore" "QcE"         "tp_var"     
+[21] "QA_var"      "QlE"         "tp_positive" "tp04"        "QpE"         "tp08"        "QoE"         "QrE"         "QjE"         "QmE"        
+[31] "QaE"         "QhE"         "QnE"         "QgE"         "wr_06"       "QdE"         "QkE"         "QfE"         "urban"       "QbE"        
+[41] "familysize"  "QiE"         "QtE"         "QbA"         "QjA"         "QrA"         "tp10"        "QiA"         "QaA"         "wf_02"      
+[51] "QfA"         "tp05"        "tp_mean"     "QgA"         "tp_negative" "QoA"         "QpA"         "QkA"         "QsA"         "QdA"        
+[61] "QeA"         "QcA"         "QhA"         "wr_01"       "QmA"         "QtA"         "QnA"         "gender"      "wr_11"       "QlA"        
+[71] "wf_01"       "wf_03"       "wr_09"       "wr_05"       "hand"        "wr_02"       "wr_04"       "wr_07"       "wr_13"       "wr_mean"    
+[81] "wr_03"       "wr_10"       "wr_12"      
+> 
+
+################
+## 24번 제출 사항 ##
+################
+CatBoost  : 
+- wf_mean, wr_mean, QA_var 제거,  나머지 범주형 적용, 변수 70개로 짜름 : 0.7729025
+
+LightGBM :
+- wf_mean, wr_mean, QA_var 제거,  나머지 범주형 적용, : 0.7715455
+
+final_score : 0.7735234
+
+################
+## 25번 제출 사항 ##
+################
+0.773358746577941
+[1] 0.7713622
+
+0.773659548319374
+[1] 0.7713731
+
+
+
+
